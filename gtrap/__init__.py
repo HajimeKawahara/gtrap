@@ -1,4 +1,4 @@
-__all__ = ['geebls','gtls_absolute',"gfilter","gtls_simple","getstat","read_keplerlc"]
+__all__ = ['geebls','gtls_absolute',"gfilter","gtls_simple","getstat","read_keplerlc","picktrap","genmock"]
 
 __version__ = "0.0.1"
 

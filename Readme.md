@@ -1,5 +1,21 @@
 gtrap: GPU transiting planet candidate detector
 
+setenv CPLUS_INCLUDE_PATH /home/kawahara/gtrap/include:${CPLUS_INCLUDE_PATH}
+
+
+# examples
+
+- gtls_kepler: GTLS for the Kepler data
+
+
+
+# gtrap
+
+## genmonck
+
+Generating LCs with mock transit (for training).
+
+## picktrap
 
 
 ## gtls
@@ -7,8 +23,6 @@ gtrap: GPU transiting planet candidate detector
 GPU-based TLS (Trapezoid Leadt Sqaure).
 
 - gtls_simple: simple gpu-based TLS
-- gtls_kepler: for the Kepler data
-
 
 ## geebls
 
