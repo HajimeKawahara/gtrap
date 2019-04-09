@@ -8,11 +8,11 @@ if __name__ == "__main__":
     import pycuda.compiler
     from pycuda.compiler import SourceModule
     import sys
-    import gtls_simple
-    import gtls_absolute
-    import gfilter
-    import getstat
-    import read_keplerlc as kep
+    import gtrap.gtls_simple as gtls_simple
+    import gtrap.gtls_absolute as gtls_absolute
+    import gtrap.gfilter as gfilter
+    import gtrap.getstat as getstat
+    import gtrap.read_keplerlc as kep
     import h5py
     import argparse
     import sqlite3
@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
         
     
-    #### KICDIR 
+    #### KICDIR
     kicdirlist=[]
     conn=sqlite3.connect("/sharksuck/kic/kic.db")
     cur=conn.cursor()

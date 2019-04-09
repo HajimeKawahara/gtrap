@@ -1,15 +1,16 @@
 gtrap: GPU transiting planet candidate detector
 
-Trapezoid/Box least square (BLS) codes writtein in pycuda.
 
-##gtls
 
-GPU-based TLS.
+## gtls
+
+GPU-based TLS (Trapezoid Leadt Sqaure).
 
 - gtls_simple: simple gpu-based TLS
 - gtls_kepler: for the Kepler data
 
-##geebls
+
+## geebls
 
 GPU-based BLS, pycuda-version of eebls.f (Kovac+2002). The codes use single precision float array. This requirement makes slight difference in the result between eebls.f and this code. Shared memory is used to cache folded light curve and temporary Signal Residue (SR). By default, GBLS allows a batch computation. An input array should be an image of light curves, which contains a set of N-light curves. 
 
@@ -23,9 +24,11 @@ non-common time array: This allows a different time sequence for each light curv
 Smoothing of light curves before the BLS generally increases the BLS signal. 
 
 ##scipy.signal.medfilt
+
 scipy.signal.medfilt provides a good detrending method.
 
-##gfilter
+## gfilter
+
 GBLS also has a gpu-based smoother, which devide a light curve by the median filtered curve.
 
 - gfilter: a gpu-based smoother
@@ -38,6 +41,6 @@ The algorithm for the fast median filter is based on the chapter of "Implementin
 
 ## Kepler LLC data
 
-###Note on file format
+### Note on file format
 
 The original fits data sometimes requires reading time comparable to the gbls itself. I recommend HDF format or feather format.
