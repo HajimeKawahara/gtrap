@@ -8,8 +8,7 @@ if __name__ == "__main__":
     import pycuda.compiler
     from pycuda.compiler import SourceModule
     import sys
-    import gtrap.gtls_simple as gtls_simple
-    import gtrap.gtls_absolute as gtls_absolute
+    import gtrap.gtls as gtls
     import gtrap.gfilter as gfilter
     import gtrap.getstat as getstat
     import gtrap.read_keplerlc as kep
@@ -234,7 +233,7 @@ if __name__ == "__main__":
     tlshmax=np.zeros(nt*nq).astype(np.float32)
     dev_tlshmax = cuda.mem_alloc(tlshmax.nbytes)
 
-    source_module=gtls_simple.gtls_module()
+    source_module=gtls.gtls_module()
     
     ##compute kma,kmi,kkmi
     sharedsize=(2*nsc + nw + 2)*4 #byte
@@ -242,9 +241,9 @@ if __name__ == "__main__":
     #gtls
     start = time.time()
     if args.m[0] == 2:
-        source_module=gtls_absolute.gtls_module()
+        source_module=gtls.gtls_module("absolute")
     else:
-        source_module=gtls_simple.gtls_module()
+        source_module=gtls.gtls_module()
     pkernel=source_module.get_function("gtls")
 
     pkernel(dev_tlssn,dev_tlsw,dev_tlst0,dev_tlsl,dev_tlshmax,\
