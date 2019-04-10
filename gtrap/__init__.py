@@ -7,3 +7,4 @@ from . import gtls
 from . import gfilter
 from . import getstat
 from . import read_keplerlc
+from . import picktrap
