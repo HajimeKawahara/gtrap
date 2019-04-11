@@ -1,28 +1,24 @@
+
+
 gtrap: GPU transiting planet candidate detector
 
-setenv CPLUS_INCLUDE_PATH /home/kawahara/gtrap/include:${CPLUS_INCLUDE_PATH}
+```
+setenv CPLUS_INCLUDE_PATH /install_directory/gtrap/include
+setenv PYTHONPATH /install_directory/gtrap
 
+```
 
 # examples
 
-- gtls_kepler: GTLS for the Kepler data
-
-
+- gtls_kepler: GPU Trapezoid Least Square (GTLS) for the Kepler data. Used in Kawahara and Masuda (2019) [![arXiv](http://img.shields.io/badge/arXiv-1904.04980-green.svg?style=flat)](http://arxiv.org/abs/1904.04980)
 
 # gtrap
-
-## genmonck
-
-Generating LCs with mock transit (for training).
-
-## picktrap
-
 
 ## gtls
 
 GPU-based TLS (Trapezoid Leadt Sqaure).
 
-- gtls_simple: simple gpu-based TLS
+- gtls: simple gpu-based TLS
 
 ## geebls
 
@@ -36,18 +32,26 @@ offset: This allows an extrenal input of the offset of the lightcurve.
 non-common time array: This allows a different time sequence for each light curve. Set the time array which has the same dimension to that of the lightcurve image array.
 
 Smoothing of light curves before the BLS generally increases the BLS signal. 
-
-##scipy.signal.medfilt
-
 scipy.signal.medfilt provides a good detrending method.
 
-## gfilter
+### gfilter
 
 GBLS also has a gpu-based smoother, which devide a light curve by the median filtered curve.
 
 - gfilter: a gpu-based smoother
 
 The algorithm for the fast median filter is based on the chapter of "Implementing a fast median filter" by Gilles Perrot from the textbook, "Designing Scientific Applications on GPUs".
+
+
+## genmonck
+
+Generating LCs with mock transit (for training).
+
+## picktrap
+
+## others
+
+some codes are under development. 
 
 ### best number of grids
 
