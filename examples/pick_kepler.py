@@ -85,7 +85,6 @@ if __name__ == "__main__":
             lcsallw.append(lcsw)
             print("2. WNORMALIZED CLEANED LC IS APPENDED")
 
-            
     np.savez(args.f[0].replace(".txt","")+"_picktrap",lcsall)
     np.savez(args.f[0].replace(".txt","")+"_picktrapW",lcsallw)
         
