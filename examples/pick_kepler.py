@@ -4,7 +4,7 @@ import math
 import numpy as np
 import argparse
 from astropy.io import fits
-import read_keplerlc as kep
+import gtrap.read_keplerlc as kep
 import pandas as pd
 from scipy import signal 
 import os
