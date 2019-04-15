@@ -6,7 +6,7 @@ import pycuda.autoinit
 import pycuda.driver as cuda
 import pycuda.compiler
 from pycuda.compiler import SourceModule
-import detect_peaks as dp
+import gtrap.detect_peaks as dp
 
 def gtls_module(mode="normal"):
     if mode=="absolute":
