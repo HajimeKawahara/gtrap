@@ -1,22 +1,23 @@
+# GTRAP: Gpu-based TRAnsiting Planet candidate detector
 
-
-gtrap: GPU transiting planet candidate detector
+GPL licence
 
 ```
 setenv CPLUS_INCLUDE_PATH /install_directory/gtrap/include
 setenv PYTHONPATH /install_directory/gtrap
-
 ```
 
 # examples
 
-- gtls_kepler: GPU Trapezoid Least Square (GTLS) for the Kepler data. Used in Kawahara and Masuda (2019) [![arXiv](http://img.shields.io/badge/arXiv-1904.04980-green.svg?style=flat)](http://arxiv.org/abs/1904.04980)
+- gtls_kepler: GPU Trapezoid Least Square (GTLS) for the Kepler data. Used in [Kawahara and Masuda (2019)](http://arxiv.org/abs/1904.04980)
+
+For the data, see [here](http://secondearths.sakura.ne.jp/gtrap/).
 
 # gtrap
 
 ## gtls
 
-GPU-based TLS (Trapezoid Leadt Sqaure).
+GPU-based TLS (Trapezoid Least Sqaure).
 
 - gtls: simple gpu-based TLS
 
@@ -42,7 +43,6 @@ GBLS also has a gpu-based smoother, which devide a light curve by the median fil
 
 The algorithm for the fast median filter is based on the chapter of "Implementing a fast median filter" by Gilles Perrot from the textbook, "Designing Scientific Applications on GPUs".
 
-
 ## genmonck
 
 Generating LCs with mock transit (for training).
@@ -51,14 +51,4 @@ Generating LCs with mock transit (for training).
 
 ## others
 
-some codes are under development. 
-
-### best number of grids
-
-~300,000
-
-## Kepler LLC data
-
-### Note on file format
-
-The original fits data sometimes requires reading time comparable to the gbls itself. I recommend HDF format or feather format.
+some codes are under development. importing exonet etc...
