@@ -3,7 +3,6 @@ import astropy.units as u
 from astropy.constants import G, R_sun, M_sun, R_jup, M_jup
 import numpy as np
 import matplotlib.pyplot as plt
-import picktrapcand as ptc
 import read_keplerlc as kep
 import argparse
 
@@ -34,21 +33,4 @@ def gentransit(t,t0=0.0,Porb=600.0,Rp=1.0,Mp=1.0,Rs=1.0,Ms=1.0,ideg=90.0,w=90.0,
 
     return injlc, b
 
-    
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Transit signal injection')
-        
-    parser.add_argument('-k', nargs=1, default=[1717722], help='kic', type=int)
-    args = parser.parse_args()
-    kicint=args.k[0]
-    lctag="data"
-    mydir="/sharksuck/kic/";
-    kicdir=ptc.getkicdir(kicint,mydir+"data/")+"/"
-
-    lc,tu,n,ntrue,nq,inval,bjdoffset,t0, t,det=kep.load_keplc([kicdir],offt="0")
-    
-    ilc,b=gentransit(t,t0=0.0,ideg=89.9,Porb=700.0)
-    plt.plot(t,ilc*det,".")
-    plt.show()
-    
     
