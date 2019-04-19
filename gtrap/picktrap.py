@@ -121,11 +121,11 @@ def pick_Wnormalized_cleaned_lc(kicdir,T0,W,alpha=2,nx=128,daytopix=48,contcrit=
 
     wid=int(alpha*W*daytopix)
     print("The range is between -",alpha," W to +",alpha," W." )
-    istart=ii-wid
-    iend=ii+wid
+    istart=max(0,ii-wid)
+    iend=min(ii+wid,len(tu))
     tus=np.copy(tu[istart:iend,0])
     lcs=np.copy(lc[istart:iend,0])
-
+    
     #pre classifier (check continuous null region)
     prec = True 
     if len(tus) == 0:
