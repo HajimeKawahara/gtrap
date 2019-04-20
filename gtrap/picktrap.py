@@ -215,7 +215,7 @@ def pick_cleaned_lc_direct(lc,tu,T0,wid=128,contcrit=84,check=False,lcout=False,
     ii=numar[tuu[i]==tu[:,0]][0]
 
     istart=ii-wid
-    iend=ii+wid
+    iend=ii+wid+1
     tus=np.copy(tu[istart:iend,0])
     lcs=np.copy(lc[istart:iend,0])
 
@@ -300,11 +300,11 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     numar=np.array(range(0,len(tu)))
     ii=numar[tuu[i]==tu[:,0]][0]
 
-
     wid=int(alpha*W*daytopix)
+    print("W=",W,"d")
     print("The range is between -",alpha," W to +",alpha," W." )
-    istart=ii-wid
-    iend=ii+wid
+    istart=ii-int(1.11*alpha*wid)
+    iend=ii+int(1.11*alpha*wid)
     tus=np.copy(tu[istart:iend,0])
     lcs=np.copy(lc[istart:iend,0])
 
@@ -357,9 +357,14 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     ### NORMALIZE
     lcs=(lcs-np.mean(lcs))/np.std(lcs)
     nlcs=len(lcs)
-    tt=np.array(range(0,nlcs))*2.0*alpha/nlcs - alpha
+    alphad=alpha*1.1
+    tt=np.array(range(0,nlcs))*2.0*alphad/nlcs - alphad
     fx = interpolate.interp1d(tt, lcs)
     tx=np.array(range(0,nx))*2.0*alpha/nx - alpha
+    print("RANGE...")
+    print(np.max(tt),np.min(tt))
+    print(np.max(tx),np.min(tx))
+
     lcsx=fx(tx)
     
     if check:
@@ -379,7 +384,7 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
 
         plt.xlabel("time (W)")
         plt.ylabel("WNC vector")
-        plt.savefig(os.path.join(savedir,tag+"vector_w.png"))
+        plt.savefig(os.path.join(savedir,tag+".png"))
         #        plt.show()
         
     if lcout:

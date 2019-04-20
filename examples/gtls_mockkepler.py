@@ -172,7 +172,6 @@ if __name__ == "__main__":
     Y = np.random.random()
     Porb = ((xPmax**(a1) - xPmin**(a1) )*Y + xPmin**(a1))**(1/a1)
 
-
     #Radius
     xRpmin=0.2
     xRpmax=2.0    
@@ -202,7 +201,6 @@ if __name__ == "__main__":
     u1 = 0.1
     u2 = 0.3
     
-
     ilc, b = gm.gentransit(tu[mask].astype(np.float64),t0,Porb,Rp,Mp,Rs,Ms,ideg,w,e,u1,u2)
     lc[mask] = lc[mask]*ilc
 #    plt.axvline(t0)
@@ -253,7 +251,7 @@ if __name__ == "__main__":
     dt=1.0
     nt=len(tu[:,0])
     #L
-    nl=10
+    nl=20
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
@@ -438,19 +436,20 @@ if __name__ == "__main__":
             print("DIFF/dur=",dTpre)
 
             ###############################################
-            ##  SUCCEED TO DETECT !!    
+            ##  SUCCEED TO DETECT !!
             if dTpre < 0.25: 
+                lab = 1
+            else:
+                lab = 0
+            
+            if True:
+#            if dTpre < 0.25: 
                 if args.o:
                     ttag=args.o[0].replace(".mock.txt","")
                 else:
                     ttag="_"                
-                
-                ofile=args.o[0]
-                f = open(ofile, 'a')
-                f.write(str(kic)+","+str(maxsn)+","+str(far)+","+str(diff)+","+str(pssn)+","+str(lent)+","+str(Pinterval)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+"\n")
-                f.close()
-                
-                ff = open("steinfo_mock"+ttag+".txt", 'a')
+                                
+                ff = open("steinfo_mock"+ttag+str(lab)+".txt", 'a')
                 ff.write(str(kic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
                 ff.close()
 
@@ -459,10 +458,15 @@ if __name__ == "__main__":
                 if args.m[0] == 0:
                     lc = 2.0 - lc
                 
-                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=128,check=True,tag="KIC"+str(kicint),savedir="mocklc")
-                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=10,check=True,tag="KIC"+str(kicint),savedir="mocklc")
+#                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
+                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="KIC"+str(kicint)+"s"+str(lab),savedir="mocklc")
+
+                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="mocklc")
                 print(len(lcs),len(lcsw))
-                np.savez("mocklc/mock"+str(kicint),[1],lcs,lcsw)
+
+                starinfo=[mstar,rstar]                                   
+
+                np.savez("mocklc/mock"+str(kicint),[lab],lcs,lcsw,starinfo)
             
             ###############################################
 
