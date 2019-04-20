@@ -460,9 +460,9 @@ if __name__ == "__main__":
                     lc = 2.0 - lc
                 
                 lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=128,check=True,tag="KIC"+str(kicint),savedir="mocklc")
-                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,check=True,tag="KIC"+str(kicint),savedir="mocklc")
-
-                np.savez("mocklc/mock"+str(kicint),lcs,lcsw)
+                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=10,check=True,tag="KIC"+str(kicint),savedir="mocklc")
+                print(len(lcs),len(lcsw))
+                np.savez("mocklc/mock"+str(kicint),[1],lcs,lcsw)
             
             ###############################################
 
