@@ -19,11 +19,10 @@ if __name__ == "__main__":
     import argparse
     import sqlite3
     import os
-    import tls
-    import detect_peaks as dp
+    import gtrap.tls as tls
+    import gtrap.detect_peaks as dp
     import sys
     from time import sleep
-    import gpucheck
     import pandas as pd
     import gtrap.genmock as gm
     import gtrap.picktrap as pt
@@ -44,7 +43,6 @@ if __name__ == "__main__":
     parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
     #    parser.add_argument('-p', nargs=1, default=[400],help='Minimum interval for DTE (d)', type=float)
     parser.add_argument('-fig', help='save figure', action='store_true')
-    parser.add_argument('-gpu', nargs=3, default=[85.0,51.0,30.0],help='GPU control, limit temperature [K], settle temperature, sleep time [sec] for cool down', type=float)
 
     ### SETTING
     mpdin = 48 #1d for peak search margin
@@ -52,21 +50,6 @@ if __name__ == "__main__":
     # #
     args = parser.parse_args()
 
-    #### GPU HEALTH CHECK #######
-    maxt=args.gpu[0]
-    sett=args.gpu[1]
-    sleeptime=args.gpu[2]
-    maxgput=gpucheck.getmaxgput_gput()
-    print(maxgput,"[C] for init")
-    if maxgput > maxt:
-        print("Fever. Waiting for cool down of the fevered GPU. ")
-        fever = True
-        while fever :
-            sleep(sleeptime)
-            maxgput=gpucheck.getmaxgput_gput()
-            print(maxgput,"[C]")
-            if maxgput < sett:
-                fever = False
     #### SLEEP TIME #######
 
 
@@ -100,7 +83,7 @@ if __name__ == "__main__":
         conn.close()
         
     elif args.r:
-        planet_data=pd.read_csv("/home/kawahara/exocal/exomock/kepler_berger.csv")
+        planet_data=pd.read_csv("data/kepler_berger.csv")
         Np=len(planet_data)
         isel=np.random.randint(0,Np-1)
         kicint=planet_data["kepid"][isel]
@@ -176,7 +159,7 @@ if __name__ == "__main__":
     ##OFFSET
 
     ############# INJECTION #################
-    planet_data=pd.read_csv("/home/kawahara/exocal/exomock/kepler_berger.csv")
+    planet_data=pd.read_csv("data/kepler_berger.csv")
     mask=planet_data["kepid"]==kicint
     rstar=planet_data["radiusnew"].values[mask]
     mstar=planet_data["mass"].values[mask]
@@ -479,7 +462,7 @@ if __name__ == "__main__":
                 lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=128,check=True,tag="KIC"+str(kicint),savedir="mocklc")
                 lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,check=True,tag="KIC"+str(kicint),savedir="mocklc")
 
-                np.savez("mocklc/mock"+ttag,lcs,lcsw)
+                np.savez("mocklc/mock"+str(kicint),lcs,lcsw)
             
             ###############################################
 

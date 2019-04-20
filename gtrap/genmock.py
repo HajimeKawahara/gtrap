@@ -3,7 +3,7 @@ import astropy.units as u
 from astropy.constants import G, R_sun, M_sun, R_jup, M_jup
 import numpy as np
 import matplotlib.pyplot as plt
-import read_keplerlc as kep
+import gtrap.read_keplerlc as kep
 import argparse
 
 def gentransit(t,t0=0.0,Porb=600.0,Rp=1.0,Mp=1.0,Rs=1.0,Ms=1.0,ideg=90.0,w=90.0,e=0.0,u1=0.1,u2=0.3):
