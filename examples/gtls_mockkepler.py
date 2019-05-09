@@ -432,9 +432,10 @@ if __name__ == "__main__":
             print(T0,W,L,H)
             print("INJECT ONE ")
             print(t0+tu0[0])
-            dTpre=np.abs((T0 - (t0+tu0[0]))/(W/2))
-            print("DIFF/dur=",dTpre)
 
+            dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
+            print("DIFF/dur=",dTpre)
+            
             ###############################################
             ##  SUCCEED TO DETECT !!
             if dTpre < 0.25: 

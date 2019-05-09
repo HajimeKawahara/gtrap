@@ -49,6 +49,8 @@ Generating LCs with mock transit (for training).
 
 ## picktrap
 
-## others
 
-some codes are under development. importing exonet etc...
+## gnet
+
+CNN classifier using Keras.
+
