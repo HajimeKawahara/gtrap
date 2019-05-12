@@ -1,4 +1,7 @@
 if __name__ == "__main__":
+    import astropy.units as u
+    from astropy.constants import G, R_sun, M_sun, R_jup, M_jup
+
     import time
     import matplotlib.pyplot as plt
     import math
@@ -16,16 +19,20 @@ if __name__ == "__main__":
     import argparse
     import sqlite3
     import os
-    import tls
-    import detect_peaks as dp
+    import gtrap.tls as tls
+    import gtrap.detect_peaks as dp
     import sys
     from time import sleep
-    import gpucheck
+    import pandas as pd
+#    import gtrap.genmock as gm
+#    import gtrap.picktrap as pt
+    
     start = time.time()
 
-    parser = argparse.ArgumentParser(description='GPU Kepler TLS')
+    parser = argparse.ArgumentParser(description='GPU Pick Kepler TLS')
     parser.add_argument('-i', nargs='+', help='sharksuck id', type=int)
     parser.add_argument('-k', nargs='+', help='kic id', type=int)
+    parser.add_argument('-r', help='Randomly selected KIC', action='store_true')
     parser.add_argument('-t', nargs=1, help='testkoi id', type=int)
     parser.add_argument('-q', nargs=1, default=["BLS_TEST"],help='SQL table name', type=str)
     parser.add_argument('-d', nargs=1, default=["bls.db"],help='SQL db name', type=str)
@@ -36,7 +43,6 @@ if __name__ == "__main__":
     parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
     #    parser.add_argument('-p', nargs=1, default=[400],help='Minimum interval for DTE (d)', type=float)
     parser.add_argument('-fig', help='save figure', action='store_true')
-    parser.add_argument('-gpu', nargs=3, default=[85.0,51.0,30.0],help='GPU control, limit temperature [K], settle temperature, sleep time [sec] for cool down', type=float)
 
     ### SETTING
     mpdin = 48 #1d for peak search margin
@@ -44,21 +50,6 @@ if __name__ == "__main__":
     # #
     args = parser.parse_args()
 
-    #### GPU HEALTH CHECK #######
-    maxt=args.gpu[0]
-    sett=args.gpu[1]
-    sleeptime=args.gpu[2]
-    maxgput=gpucheck.getmaxgput_gput()
-    print(maxgput,"[C] for init")
-    if maxgput > maxt:
-        print("Fever. Waiting for cool down of the fevered GPU. ")
-        fever = True
-        while fever :
-            sleep(sleeptime)
-            maxgput=gpucheck.getmaxgput_gput()
-            print(maxgput,"[C]")
-            if maxgput < sett:
-                fever = False
     #### SLEEP TIME #######
 
 
@@ -90,7 +81,23 @@ if __name__ == "__main__":
             conn.commit()
             print("SID=",sid)
         conn.close()
-
+        
+    elif args.r:
+        planet_data=pd.read_csv("data/kepler_berger.csv")
+        Np=len(planet_data)
+        isel=np.random.randint(0,Np-1)
+        kicint=planet_data["kepid"][isel]
+        kicintlist=[kicint]
+        
+        conn=sqlite3.connect("/sharksuck/kic/kic.db")
+        cur=conn.cursor()
+        for kicint in kicintlist:
+            cur.execute("SELECT id FROM kic where kicint="+str(kicint)+";")
+            sid=cur.fetchone()[0]
+            sidlist.append(sid)
+            conn.commit()
+            print("SID=",sid)
+        conn.close()
         
     
     #### KICDIR
@@ -150,8 +157,11 @@ if __name__ == "__main__":
     print("number of the KICs, nq=",nq)
     print("offset=",tu0)
     ##OFFSET
+    
+    ############# NO INJECTION #################
+    #########################################
 
-
+    
     ## for transit ##
     if args.m[0] == 0:
         lc = 2.0 - lc
@@ -194,7 +204,7 @@ if __name__ == "__main__":
     dt=1.0
     nt=len(tu[:,0])
     #L
-    nl=10
+    nl=20
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
@@ -373,24 +383,46 @@ if __name__ == "__main__":
             H=-H
             print("PRECISE TRAFIT: T0,W,L,H")
             print(T0,W,L,H)
+            print("INJECT ONE ")
+            print(t0+tu0[0])
+
+            dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
+            print("DIFF/dur=",dTpre)
             
-            if args.o:
-                ttag=args.o[0].replace(".txt","")
+            ###############################################
+            ##  SUCCEED TO DETECT !!
+            if dTpre < 0.25: 
+                lab = 1
             else:
-                ttag="_"
+                lab = 0
+            
+            if True:
+#            if dTpre < 0.25: 
+                if args.o:
+                    ttag=args.o[0].replace(".pick.txt","")
+                else:
+                    ttag="_"                
+                                
+                ff = open("steinfo_pick"+ttag+str(lab)+".txt", 'a')
+                ff.write(str(kic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
+                ff.close()
 
-            ofile=args.o[0]
-            f = open(ofile, 'a')
-            f.write(str(kic)+","+str(maxsn)+","+str(far)+","+str(diff)+","+str(pssn)+","+str(lent)+","+str(Pinterval)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+"\n")
-            f.close()
-
+                T0tilde=tlst0[iq::nq][i]#+tu0[iq]
+                ## REINVERSE
+                if args.m[0] == 0:
+                    lc = 2.0 - lc
                 
-            ff = open("steinfo"+ttag+".txt", 'a')
-            ff.write(str(kic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
-            ff.close()
+                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="KIC"+str(kicint)+"s"+str(lab),savedir="picklc")
+                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="picklc")
+                print(len(lcs),len(lcsw))
+
+                starinfo=[mstar,rstar]                                   
+
+                np.savez("picklc/pick"+str(kicint),[lab],lcs,lcsw,starinfo)
             
             ###############################################
 
+            
             if args.fig:
                 fig=plt.figure(figsize=(10,7.5))
                 ax=fig.add_subplot(3,1,1)
@@ -402,7 +434,9 @@ if __name__ == "__main__":
                 plt.axhline(median,color="green",alpha=0.3)
                 plt.ylabel("TLS series",fontsize=18)            
                 #            plt.title("KIC"+str(kic)+" SN="+str(round(maxsn,1))+" far="+str(round(far,1))+" dp="+str(round(diff,1)))
-                plt.title("KIC"+str(kic)+" Pi="+str(Pinterval),fontsize=18)
+                plt.title("KIC"+str(kic)+" (transit injected) Pi="+str(Pinterval),fontsize=18)
+                plt.axvline(t0+tu0,color="orange",ls="dotted")
+
                 ax=fig.add_subplot(3,1,2)
                 plt.tick_params(labelsize=18)
                 
@@ -417,6 +451,7 @@ if __name__ == "__main__":
                 
                 plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
                 plt.ylabel("PDCSAP",fontsize=18)
+                plt.axvline(t0,color="red")
                 
                 ax=fig.add_subplot(3,1,3)
                 plt.tick_params(labelsize=18)
@@ -437,7 +472,9 @@ if __name__ == "__main__":
                 else:
                     plt.xlabel("BKJD",fontsize=18)
 
-                plt.savefig("KIC"+str(kic)+".png")
+                plt.axvline(t0,color="red")
+                    
+                plt.savefig("KIC"+str(kic)+".pick.png")
                 print("t0=",tlst0[iq::nq][i]+tu0[iq])
                 print("height=",H)
                 print("L=",L)
