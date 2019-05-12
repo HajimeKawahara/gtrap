@@ -157,7 +157,7 @@ if __name__ == "__main__":
     print("number of the KICs, nq=",nq)
     print("offset=",tu0)
     ##OFFSET
-
+    
     ############# INJECTION #################
     planet_data=pd.read_csv("data/kepler_berger.csv")
     mask=planet_data["kepid"]==kicint

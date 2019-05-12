@@ -8,7 +8,7 @@ from keras.layers import Conv1D
 from keras.layers import MaxPooling1D
 from keras.layers import Dropout
 from keras.layers import Flatten
-
+from keras import backend
 from keras.layers.merge import concatenate
 
 import glob
@@ -39,7 +39,32 @@ def makearr(flist):
     info=np.array(info)
     
     return lab,X,Xw,info
-    
+
+#precision
+def Precision(y_true, y_pred):
+    true_positives = backend.sum(backend.cast(backend.greater(backend.clip(y_true * y_pred, 0, 1), 0.20), 'float32'))
+    pred_positives = backend.sum(backend.cast(backend.greater(backend.clip(y_pred, 0, 1), 0.20), 'float32'))
+
+    precision = true_positives / (pred_positives + backend.epsilon())
+    return precision
+
+#recall
+def Recall(y_true, y_pred):
+    true_positives = backend.sum(backend.cast(backend.greater(backend.clip(y_true * y_pred, 0, 1), 0.20), 'float32'))
+    poss_positives = backend.sum(backend.cast(backend.greater(backend.clip(y_true, 0, 1), 0.20), 'float32'))
+
+    recall = true_positives / (poss_positives + backend.epsilon())
+    return recall
+
+#f-measure
+def Fvalue(y_true, y_pred):
+    p_val = Precision(y_true, y_pred)
+    r_val = Recall(y_true, y_pred)
+    f_val = 2*p_val*r_val / (p_val + r_val)
+
+    return f_val
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='CNN classifier')
@@ -96,10 +121,11 @@ if __name__ == "__main__":
     concat = Dense(units=1,activation="sigmoid")(concat)
 
     model = Model(inputs=[inwide,inlocal],outputs=concat)    
-    model.compile(optimizer="adam",loss="binary_crossentropy",metrics=["accuracy"])
+    model.compile(optimizer="adam",loss="binary_crossentropy",metrics=[Precision, Recall, Fvalue])
 
     print(model.summary())
     
 #    useF=300
 #    model.fit([Xw[:useF,:,:],X[:useF,:,:]],lab[:useF],epochs=5,validation_data=([Xw[useF:,:,:],X[useF:,:,:]],lab[useF:]))
-    model.fit([Xw,X],lab,epochs=5,validation_split=0.2)
+    model.fit([Xw,X],lab,epochs=20,validation_split=0.2)
+    model.save('astronet.h5')
