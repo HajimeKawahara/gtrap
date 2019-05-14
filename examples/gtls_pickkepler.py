@@ -25,7 +25,7 @@ if __name__ == "__main__":
     from time import sleep
     import pandas as pd
 #    import gtrap.genmock as gm
-#    import gtrap.picktrap as pt
+    import gtrap.picktrap as pt
     
     start = time.time()
 
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', nargs=1, default=["fits"],help='filetype: fits (BKJD), hdf5 (relative Day)', type=str)
     parser.add_argument('-m', nargs=1, default=[0],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
-    parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
+    parser.add_argument('-n', nargs=1, default=[1],help='Number of picking peaks', type=int)
     #    parser.add_argument('-p', nargs=1, default=[400],help='Minimum interval for DTE (d)', type=float)
     parser.add_argument('-fig', help='save figure', action='store_true')
 
@@ -49,7 +49,11 @@ if __name__ == "__main__":
             
     # #
     args = parser.parse_args()
-
+    if args.fig:
+        pngcheck=True
+    else:
+        pngcheck=False
+        
     #### SLEEP TIME #######
 
 
@@ -159,6 +163,12 @@ if __name__ == "__main__":
     ##OFFSET
     
     ############# NO INJECTION #################
+    ############# INJECTION #################
+    planet_data=pd.read_csv("data/kepler_berger.csv")
+    mask=planet_data["kepid"]==kicint
+    rstar=planet_data["radiusnew"].values[mask]
+    mstar=planet_data["mass"].values[mask]
+
     #########################################
 
     
@@ -278,7 +288,7 @@ if __name__ == "__main__":
     ccdp15=np.array(dat["arr_0"][:,1])
 
     ########################
-    PeakMaxindex=args.n[0]-1
+    PickPeaks=args.n[0]
     
 
     for iq,kic in enumerate(kicintlist):
@@ -296,59 +306,25 @@ if __name__ == "__main__":
         #### PEAK STATISTICS ####
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
         peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
-        ntop = 4 # the nuber of the top peaks
+
+        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
         
-        if len(peak) > ntop:
-
-        ### OLD ###
-#            stdc=np.nanstd(tlssn[iq::nq][peak[ntop:]]) #peak std
-#            medc=np.nanmedian(tlssn[iq::nq][peak[ntop:]])
-#            pssn=(tlssn[iq::nq][peak[0]]-medc)/stdc
-
-            i = np.argmax(tlssn[iq::nq])
-            ind=np.searchsorted(kicintccdp,kic)
-            ccdpval=ccdp15[ind]*1.e-6
-            pssn = tlshmax[iq::nq][i]/ccdpval
-            
-        else:
-            pssn = np.inf
-
-#===========CRIT 1==========================       
-        if len(peak) > ntop:
-            peak=peak[0:ntop]
-            peakval = tlssn[iq::nq][peak]
-            print(peakval)
-            ## dntop-1-th peak/std
-            diff=(peakval[-1]-median)/std
-        else:
-            ntop=len(peak)            
-            diff = 0.0
-#===========================================
-        
-        maxsn=tlssn[iq::nq][peak][PeakMaxindex]
+        maxsn=tlssn[iq::nq][peak][0:PickPeaks]
         Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
         far=(maxsn-median)/std
 
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
-#        if maxsn > 1.8:
-#            xxcrit=10.5*np.log10(maxsn-1.8)**0.6-3.5
-#            #xxcrit=10.5*np.log10(maxsn-1.8)**0.6-1.5
-#            xxcrit=10.5*np.log10(maxsn-1.8)**0.6-0.9 #DTE
-#        else:
-#            xxcrit=0.0
-
-        if True:
+        for ipick in range(0,PickPeaks):
 #        if (diff < xxcrit and diff < 8.0 and float(lent) > minlen and Pinterval > 300.0) or args.n[0]==1:
-            i = np.argmax(tlssn[iq::nq])
+            i = peak[ipick]
             im=np.max([0,int(i-nsc*ffac)])
             ix=np.min([nt,int(i+nsc*ffac)])
             imn=np.max([0,int(i-nsc/2)])
             ixn=np.min([nt,int(i+nsc/2)])
 
 
-            if args.m[0] == 0:    
+            if args.m[0] == 0 and ipick==0:    
                 llc=2.0 - lc[im:ix,iq]
                 llcn=2.0 - lc[imn:ixn,iq]
 
@@ -360,10 +336,10 @@ if __name__ == "__main__":
             ttcn=tu[imn:ixn,iq]#narrow region
 
             #PEAK VALUE
-            T0p=tlst0[iq::nq][peak][0]+tu0[iq]
-            Wp=tlsw[iq::nq][peak][0]
-            Lp=tlsl[iq::nq][peak][0]
-            Hp=tlshmax[iq::nq][peak][0]
+            T0p=tlst0[iq::nq][peak[ipick]]+tu0[iq]
+            Wp=tlsw[iq::nq][peak[ipick]]
+            Lp=tlsl[iq::nq][peak[ipick]]
+            Hp=tlshmax[iq::nq][peak[ipick]]
 
             #################
             print("GPU ROUGH: T0,W,L,H")
@@ -383,18 +359,7 @@ if __name__ == "__main__":
             H=-H
             print("PRECISE TRAFIT: T0,W,L,H")
             print(T0,W,L,H)
-            print("INJECT ONE ")
-            print(t0+tu0[0])
 
-            dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
-            print("DIFF/dur=",dTpre)
-            
-            ###############################################
-            ##  SUCCEED TO DETECT !!
-            if dTpre < 0.25: 
-                lab = 1
-            else:
-                lab = 0
             
             if True:
 #            if dTpre < 0.25: 
@@ -403,22 +368,23 @@ if __name__ == "__main__":
                 else:
                     ttag="_"                
                                 
-                ff = open("steinfo_pick"+ttag+str(lab)+".txt", 'a')
+                ff = open("steinfo_pick"+ttag+".txt", 'a')
                 ff.write(str(kic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
                 ff.close()
 
                 T0tilde=tlst0[iq::nq][i]#+tu0[iq]
                 ## REINVERSE
                 if args.m[0] == 0:
-                    lc = 2.0 - lc
+                    lcxx = 2.0 - lc
                 
-                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="KIC"+str(kicint)+"s"+str(lab),savedir="picklc")
-                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="picklc")
+                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lcxx,tu,T0tilde,W,alpha=1,nx=201,check=pngcheck,tag="KIC"+str(kicint)+"_s"+str(ipick),savedir="picklc/png")
+                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lcxx,tu,T0tilde,W,alpha=5,nx=2001,check=pngcheck,tag="KIC"+str(kicint)+"_w"+str(ipick),savedir="picklc/png")
                 print(len(lcs),len(lcsw))
 
                 starinfo=[mstar,rstar]                                   
+                genericinfo=np.array([kicint,T0p,T0,tlst0[iq::nq][i]+tu0[iq]])
 
-                np.savez("picklc/pick"+str(kicint),[lab],lcs,lcsw,starinfo)
+                np.savez("picklc/pick"+str(kicint)+"_"+str(ipick),[-1],lcs,lcsw,starinfo,genericinfo)
             
             ###############################################
 

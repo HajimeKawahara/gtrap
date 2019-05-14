@@ -121,7 +121,7 @@ if __name__ == "__main__":
     concat = Dense(units=1,activation="sigmoid")(concat)
 
     model = Model(inputs=[inwide,inlocal],outputs=concat)    
-    model.compile(optimizer="adam",loss="binary_crossentropy",metrics=[Precision, Recall, Fvalue])
+    model.compile(optimizer="adam",loss="binary_crossentropy")
 
     print(model.summary())
     
