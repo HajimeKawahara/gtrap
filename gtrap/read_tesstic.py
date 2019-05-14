@@ -4,7 +4,7 @@
 import numpy as np 
 import h5py
 import sys
-
+import pandas as pd
 def load_tesstic(filelist,offt="t[0]",nby=1000):
     
     inval=-1000.0 #invalid time
@@ -94,7 +94,12 @@ def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
 
     
 if __name__ == "__main__":
+    
+    dat=np.load("../data/step3.list.npz")
+    print(dat["arr_0"][100])
+    
     time, flux, q, cno, ra, dec = read_tesstic("/pike/pipeline/step3/tess_1111192_8_2_4.h5")
     n=1200
     lcn,tun = throw_tessintarray(n,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
     print(lcn)
+    
