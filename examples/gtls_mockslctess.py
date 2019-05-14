@@ -26,26 +26,21 @@ if __name__ == "__main__":
     import pandas as pd
     import gtrap.genmock as gm
     import gtrap.picktrap as pt
-    import gtrap.read_tesslc as tes
+#    import gtrap.read_tesslc as tes
+    import gtrap.read_tesstic as testic
     
     start = time.time()
 
     parser = argparse.ArgumentParser(description='GPU Mock TESS TLS')
     parser.add_argument('-r', help='Randomly selected CTLv3/TIC/', action='store_true')
     parser.add_argument('-i', nargs=1, help='mid (master ID)', type=int)
-    parser.add_argument('-d', nargs=1, default=["data/master.list"],help='master list', type=str)    
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
-    parser.add_argument('-q', nargs=1, default=["BLS_TEST"],help='SQL table name', type=str)
-    parser.add_argument('-b', nargs=1, default=[0],help='batch num', type=int)
-    parser.add_argument('-f', nargs=1, default=["fits"],help='filetype: fits (BKJD), hdf5 (relative Day)', type=str)
     parser.add_argument('-m', nargs=1, default=[0],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
     parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
-    #    parser.add_argument('-p', nargs=1, default=[400],help='Minimum interval for DTE (d)', type=float)
+
     parser.add_argument('-fig', help='save figure', action='store_true')
     parser.add_argument('-c', help='Check detrended light curve', action='store_true')
-
-    parser.add_argument('-gpu', nargs=3, default=[85.0,51.0,30.0],help='GPU control, limit temperature [K], settle temperature, sleep time [sec] for cool down', type=float)
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
 
     ### SETTING
@@ -54,33 +49,15 @@ if __name__ == "__main__":
     # #
     args = parser.parse_args()
 
-    #### SLEEP TIME #######
-    if args.i:
-        masterlist=args.d[0]
-        print("MASTER LIST=",masterlist)
-        mdat=pd.read_csv(masterlist,delimiter=",")
-        mid=args.i[0]
-        print("MID=",mid)
-        mask=mdat["MID"]==mid
-        print(mdat["ID"][mask].values[0])
-        ticint=mdat["ID"][mask].values[0]
-    elif args.t:
-        ticint=args.t[0]
-    
-    lc=[]
-    tu=[]
-
 
     ###generate filelist
     icdir="/pike/tess/data/lc"
-    print(icdir+'/*'+str(ticint)+'*.fits')
-    ff=sorted(glob.glob(icdir+'/*'+str(ticint)+'*.fits'), key=numericalSort)
-    filelist=[]
-    for filef in ff:
-        filelist.append(os.path.join(icdir,filef))
-    print(filelist)
-    print("fits mode, BKJD.")
-    lc,tu,n,ntrue,nq,inval,bjdoffset,t0arr, t, det, info=tes.load_tesslc(filelist)
+
+    time, flux, q, cno, ra, dec = read_tesstic(fileone)
+    n=1200
+    lc,tu = throw_tessintarray(n,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
+
+    #lc,tu,n,ntrue,nq,inval,bjdoffset,t0arr, t, det, info=testic.load_tesslc(filelist)
     tu0=t0arr
 
     print("number of the KICs, nq=",nq)
