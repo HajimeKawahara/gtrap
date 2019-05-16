@@ -51,66 +51,14 @@ if __name__ == "__main__":
 
 
     ###generate filelist
-    icdir="/pike/tess/data/lc"
+    icdir="/pike/pipeline/step3"
 
+
+    fileone=
+    nlc=1200
     time, flux, q, cno, ra, dec = read_tesstic(fileone)
-    n=1200
-    lc,tu = throw_tessintarray(n,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
+    lc,tu = throw_tessintarray(nlc,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
 
-    #lc,tu,n,ntrue,nq,inval,bjdoffset,t0arr, t, det, info=testic.load_tesslc(filelist)
-    tu0=t0arr
-
-    print("number of the KICs, nq=",nq)
-    print("offset=",tu0)
-    ##OFFSET
-
-
-    #########################################################
-    print("###################################################")
-    print("# WARNING:BRIGHTNESS LIMIT #")
-    print("###################################################")
-
-    dat=np.load("data/rmag.npz")
-    kicintar=np.array(dat["arr_0"][:,0]).astype(np.int)
-    rmagar=np.array(dat["arr_0"][:,1])
-    ##############################################################
-        
-    
-    lc=[]
-    tu=[]
-    n=len(kicdirlist)
-
-    if args.f[0]=="hdf5":
-        print("HDF5 mode, relative day.")
-        tu0=[]
-        for i,kicdir in enumerate(kicdirlist):
-            path=kicdir.replace("data",sqltag)
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-            infile = os.path.join(kicdir,str(kicintlist[i])+".h5")
-            h5file = h5py.File(infile,"r")
-            lc.append(h5file["/lc"].value)
-            tu.append(h5file["/tu"].value)
-
-            par  = h5file["/params"].value 
-            n,ntrue,nq,inval=np.array(par,dtype=np.int)
-            h5file.flush()
-            h5file.close()
-            tu0.append(0.0)#????
-
-        tu=np.array(tu).transpose()
-        lc=np.array(lc).transpose()
-        
-    elif args.f[0]=="fits":
-        print("fits mode, BKJD.")        
-        lc,tu,n,ntrue,nq,inval,bjdoffset,t0arr, t, det=kep.load_keplc(kicdirlist)
-        tu0=t0arr
-    else:
-        sys.exit("No file type -f "+args.f[0])
-    print("number of the KICs, nq=",nq)
-    print("offset=",tu0)
-    ##OFFSET
     
     ############# INJECTION #################
     planet_data=pd.read_csv("data/kepler_berger.csv")

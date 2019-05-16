@@ -63,8 +63,8 @@ def read_tesstic(hdf):
         
         ra=f["header"]["ra"].value                        
         dec=f["header"]["dec"].value                        
-
-        return time, flux, q, cno, ra, dec
+        tic=f["header"]["TID"].value
+        return time, flux, q, cno, ra, dec, tic
 
 
 def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
@@ -94,12 +94,18 @@ def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
 
     
 if __name__ == "__main__":
+
+    mid=1000
     
     dat=np.load("../data/step3.list.npz")
-    print(dat["arr_0"][100])
-    
-    time, flux, q, cno, ra, dec = read_tesstic("/pike/pipeline/step3/tess_1111192_8_2_4.h5")
-    n=1200
+    fileone=dat["arr_0"][mid]
+    rad=dat["arr_1"][mid] #stellar radius
+    mass=dat["arr_2"][mid] #stellar mass
+
+    print(fileone)
+    time, flux, q, cno, ra, dec, tic = read_tesstic(fileone)
+    print(tic)
+    n=1500
     lcn,tun = throw_tessintarray(n,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
     print(lcn)
-    
+
