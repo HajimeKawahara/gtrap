@@ -35,7 +35,7 @@ if __name__ == "__main__":
     parser.add_argument('-r', help='Randomly selected CTLv3/TIC/', action='store_true')
     parser.add_argument('-i', nargs=1, help='mid (master ID)', type=int)
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
-    parser.add_argument('-m', nargs=1, default=[0],help='Mode: transit=0,lensing=1,absolute=2', type=int)
+    parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
     parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
 
@@ -50,25 +50,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
 
-    ###generate filelist
+    ###get filename from the list
+    mid = args.i[0]
+    dat=np.load("../data/step3.list.npz")
+    fileone=dat["arr_0"][mid]    
+    rstar=dat["arr_1"][mid] #stellar radius
+    mass=dat["arr_2"][mid] #stellar mass
+
     icdir="/pike/pipeline/step3"
 
-
-    fileone=
-    nlc=1200
+    nlc=2001
     time, flux, q, cno, ra, dec = read_tesstic(fileone)
     lc,tu = throw_tessintarray(nlc,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
-
     
     ############# INJECTION #################
-    planet_data=pd.read_csv("data/kepler_berger.csv")
-    mask=planet_data["kepid"]==kicint
-    rstar=planet_data["radiusnew"].values[mask]
-    mstar=planet_data["mass"].values[mask]
-
+    
     #f(P) propto P**-5/3
-    xPmin=700.0
-    xPmax=5000.0    
+    xPmin=10.0
+    xPmax=50.0    
     alpha=-5/3.
     a1=alpha+1.0
     Y = np.random.random()
@@ -76,11 +75,11 @@ if __name__ == "__main__":
 
     #Radius
     xRpmin=0.2
-    xRpmax=2.0    
+    xRpmax=1.0    
     Y = np.random.random()    
     Rp = Y*(xRpmax-xRpmin) + xRpmin
     #Rp=1.0 ### DEBUG
-    Mp = 0.5*Rp*Rp
+    Mp = 1.0
     
     Ms = mstar
     Rs = rstar
@@ -104,10 +103,10 @@ if __name__ == "__main__":
     u2 = 0.3
     
     ilc, b = gm.gentransit(tu[mask].astype(np.float64),t0,Porb,Rp,Mp,Rs,Ms,ideg,w,e,u1,u2)
-    lc[mask] = lc[mask]*ilc
-#    plt.axvline(t0)
-#    plt.plot(tu,lc,".")
-#    plt.show()
+    lc[mask] = lc[mask]*(2.0-ilc)
+    plt.axvline(t0)
+    plt.plot(tu,lc,".")
+    plt.savefig("test.png")
     #########################################
 
     
@@ -364,7 +363,7 @@ if __name__ == "__main__":
 #                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
                 lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="KIC"+str(kicint)+"s"+str(lab),savedir="mocklc")
 
-                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="mocklc")
+                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=1001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="mocklc")
                 print(len(lcs),len(lcsw))
 
                 starinfo=[mstar,rstar]                                   
