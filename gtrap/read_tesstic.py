@@ -69,7 +69,7 @@ def read_tesstic(hdf):
 
 def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
     #dt=t[2]-t[1]
-    #offt=t[1]
+    #offt=t[1]    
     offset=np.array(cno[0])
     jend=int(cno[-1]-offset+1)
     lcn=np.ones(n)*fillvalv
@@ -90,7 +90,7 @@ def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
             lcn[j]=lc[i]
             tun[j]=t[i]-t0
 
-    return lcn,tun
+    return lcn,tun, t0
 
     
 if __name__ == "__main__":

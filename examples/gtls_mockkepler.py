@@ -239,14 +239,13 @@ if __name__ == "__main__":
 
     #tbls setting
     #the number of the window width= # of the threads should be 2^n !!!!
-    nw=128 
+    nw=1024
     
     # Max and Min of Widths
     wmin = 1.0  #  day
     wmax = 6.0  # day
     dw=(wmax-wmin)/(nw-1)
     t0min=(2*wmin) #test
-    t0max=n-2*wmin #test
 
     dt=1.0
     nt=len(tu[:,0])
@@ -407,31 +406,16 @@ if __name__ == "__main__":
             ttcn=tu[imn:ixn,iq]#narrow region
 
             #PEAK VALUE
-            T0p=tlst0[iq::nq][peak][0]+tu0[iq]
-            Wp=tlsw[iq::nq][peak][0]
-            Lp=tlsl[iq::nq][peak][0]
-            Hp=tlshmax[iq::nq][peak][0]
+            T0=tlst0[iq::nq][peak][0]+tu0[iq]
+            W=tlsw[iq::nq][peak][0]
+            L=tlsl[iq::nq][peak][0]
+            H=tlshmax[iq::nq][peak][0]
 
             #################
             print("GPU ROUGH: T0,W,L,H")
-            print(T0p,Wp,Lp,Hp)
-            ### RE (PRECISE) FIT
-            NT0=10
-            dT0=0.1
-            tl=np.linspace(T0p-dT0,T0p+dT0,NT0)
-            NW=10
-            dW=Wp/100
-            Wl=np.linspace(Wp-dW,Wp+dW,NW)
-            NL=20
-            Lpd=0.0
-            Lpu=Wp/2.0
-            Ll=np.linspace(Lpd,Lpu,NL)
-            detpre,H,W,L,T0,offsetlc=tls.tlsfit(t,det,Wl,Ll,tl)
-            H=-H
-            print("PRECISE TRAFIT: T0,W,L,H")
             print(T0,W,L,H)
-            print("INJECT ONE ")
-            print(t0+tu0[0])
+            xmask=(t-T0>=-W/2)*(t-T0<=W/2)
+            offsetlc=np.nanmean(det[xmask])
 
             dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
             print("DIFF/dur=",dTpre)

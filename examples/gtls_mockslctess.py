@@ -27,7 +27,7 @@ if __name__ == "__main__":
     import gtrap.genmock as gm
     import gtrap.picktrap as pt
 #    import gtrap.read_tesslc as tes
-    import gtrap.read_tesstic as testic
+    import gtrap.read_tesstic as tesstic
     
     start = time.time()
 
@@ -55,19 +55,33 @@ if __name__ == "__main__":
     dat=np.load("../data/step3.list.npz")
     fileone=dat["arr_0"][mid]    
     rstar=dat["arr_1"][mid] #stellar radius
-    mass=dat["arr_2"][mid] #stellar mass
+    mstar=dat["arr_2"][mid] #stellar mass
 
     icdir="/pike/pipeline/step3"
 
     nlc=2001
-    time, flux, q, cno, ra, dec = read_tesstic(fileone)
-    lc,tu = throw_tessintarray(nlc,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
+    t, det, q, cno, ra, dec, ticint = tesstic.read_tesstic(fileone)
+
+    #masking quality flaged bins
+    mask=(q==0)
+    t=t[mask]
+    det=det[mask]
+    cno=cno[mask]
+
+    #set arrayed bin
+    lc,tu, tu0 = tesstic.throw_tessintarray(nlc,cno,t,det,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
     
+    lc=np.array([lc]).transpose()
+    tu=np.array([tu]).transpose()
+    gapmask=(tu<0)
+    ntrue=np.array([len(tu[~gapmask])])
+    nq=1
+    tu0=np.array([tu0]) ##should change
     ############# INJECTION #################
     
     #f(P) propto P**-5/3
-    xPmin=10.0
-    xPmax=50.0    
+    xPmin=3.0
+    xPmax=30.0    
     alpha=-5/3.
     a1=alpha+1.0
     Y = np.random.random()
@@ -77,8 +91,8 @@ if __name__ == "__main__":
     xRpmin=0.2
     xRpmax=1.0    
     Y = np.random.random()    
-    Rp = Y*(xRpmax-xRpmin) + xRpmin
-    #Rp=1.0 ### DEBUG
+    #Rp = Y*(xRpmax-xRpmin) + xRpmin
+    Rp= 1.0 ### DEBUG
     Mp = 1.0
     
     Ms = mstar
@@ -88,7 +102,8 @@ if __name__ == "__main__":
     #b=a*np.cos(ideg/180.0*np.pi)
     b=np.random.random()
     ideg=np.arccos(b/a)/np.pi*180.0
-    ideg=ideg[0]
+    #print(ideg,"deg")
+    #ideg=ideg[0]
     print(ideg,"deg")
     
     mask=(tu>0.0)&(tu==tu)
@@ -104,11 +119,20 @@ if __name__ == "__main__":
     
     ilc, b = gm.gentransit(tu[mask].astype(np.float64),t0,Porb,Rp,Mp,Rs,Ms,ideg,w,e,u1,u2)
     lc[mask] = lc[mask]*(2.0-ilc)
-    plt.axvline(t0)
-    plt.plot(tu,lc,".")
-    plt.savefig("test.png")
-    #########################################
 
+    if args.fig:
+        fig = plt.figure()
+        ax = fig.add_subplot(211)
+        ax.axvline(t0)
+        ax.plot(tu,lc,".")
+        plt.ylim(np.min(lc[lc>0.0]),np.max(lc))
+        ax = fig.add_subplot(212)
+        ax.axvline(t0)
+        ax.plot(tu,lc,".")
+        plt.ylim(np.min(lc[lc>0.0]),np.max(lc))
+        plt.xlim(t0-1,t0+1)
+        plt.savefig("test.png")
+    #########################################
     
     ## for transit ##
     if args.m[0] == 0:
@@ -126,8 +150,16 @@ if __name__ == "__main__":
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
 
     ##detrend (directly use)
+
+    #median filter width
+    medsmt_width = 32
+
+
     nby=1000 ## of thread
-    dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=128,isw=0,osw=1) #detrend
+    print(lc)
+
+    
+    dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=medsmt_width,isw=0,osw=1) #detrend
     
     #set
     tu=np.array(tu,order="C").astype(np.float32)
@@ -140,19 +172,18 @@ if __name__ == "__main__":
 
     #tbls setting
     #the number of the window width= # of the threads should be 2^n !!!!
-    nw=128 
+    nw=1024 
     
     # Max and Min of Widths
-    wmin = 1.0  #  day
-    wmax = 6.0  # day
+    wmin = 0.2  #  day
+    wmax = 1.0  # day
     dw=(wmax-wmin)/(nw-1)
     t0min=(2*wmin) #test
-    t0max=n-2*wmin #test
 
     dt=1.0
     nt=len(tu[:,0])
     #L
-    nl=20
+    nl=40
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
@@ -221,18 +252,13 @@ if __name__ == "__main__":
 
 
     #========================================--
-    dat=np.load("data/cdpp15.npz")
-    kicintccdp=np.array(dat["arr_0"][:,0]).astype(np.int)
-    ccdp15=np.array(dat["arr_0"][:,1])
 
     ########################
     PeakMaxindex=args.n[0]-1
     
 
-    for iq,kic in enumerate(kicintlist):
+    for iq,tic in enumerate([ticint]):
 
-        ind=np.searchsorted(kicintar,kic)
-        rmag=(rmagar[ind])
 
         fac=1.0
         ffac = 8.0 #region#
@@ -254,12 +280,12 @@ if __name__ == "__main__":
 #            pssn=(tlssn[iq::nq][peak[0]]-medc)/stdc
 
             i = np.argmax(tlssn[iq::nq])
-            ind=np.searchsorted(kicintccdp,kic)
-            ccdpval=ccdp15[ind]*1.e-6
-            pssn = tlshmax[iq::nq][i]/ccdpval
+            #ind=np.searchsorted(kicintccdp,kic)
+            #ccdpval=ccdp15[ind]*1.e-6
+            #pssn = tlshmax[iq::nq][i]/ccdpval
             
-        else:
-            pssn = np.inf
+#        else:
+            #pssn = np.inf
 
 #===========CRIT 1==========================       
         if len(peak) > ntop:
@@ -308,31 +334,16 @@ if __name__ == "__main__":
             ttcn=tu[imn:ixn,iq]#narrow region
 
             #PEAK VALUE
-            T0p=tlst0[iq::nq][peak][0]+tu0[iq]
-            Wp=tlsw[iq::nq][peak][0]
-            Lp=tlsl[iq::nq][peak][0]
-            Hp=tlshmax[iq::nq][peak][0]
+            T0=tlst0[iq::nq][peak][0]+tu0[iq]
+            W=tlsw[iq::nq][peak][0]
+            L=tlsl[iq::nq][peak][0]
+            H=tlshmax[iq::nq][peak][0]
 
             #################
             print("GPU ROUGH: T0,W,L,H")
-            print(T0p,Wp,Lp,Hp)
-            ### RE (PRECISE) FIT
-            NT0=10
-            dT0=0.1
-            tl=np.linspace(T0p-dT0,T0p+dT0,NT0)
-            NW=10
-            dW=Wp/100
-            Wl=np.linspace(Wp-dW,Wp+dW,NW)
-            NL=20
-            Lpd=0.0
-            Lpu=Wp/2.0
-            Ll=np.linspace(Lpd,Lpu,NL)
-            detpre,H,W,L,T0,offsetlc=tls.tlsfit(t,det,Wl,Ll,tl)
-            H=-H
-            print("PRECISE TRAFIT: T0,W,L,H")
             print(T0,W,L,H)
-            print("INJECT ONE ")
-            print(t0+tu0[0])
+            xmask=(t-T0>=-W/2)*(t-T0<=W/2)
+            offsetlc=np.nanmean(det[xmask])
 
             dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
             print("DIFF/dur=",dTpre)
@@ -347,12 +358,12 @@ if __name__ == "__main__":
             if True:
 #            if dTpre < 0.25: 
                 if args.o:
-                    ttag=args.o[0].replace(".mock.txt","")
+                    ttag=args.o[0].replace(".mock_slctess.txt","")
                 else:
                     ttag="_"                
                                 
-                ff = open("steinfo_mock"+ttag+str(lab)+".txt", 'a')
-                ff.write(str(kic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
+                ff = open("steinfo_mock_slctess"+ttag+str(lab)+".txt", 'a')
+                ff.write(str(tic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
                 ff.close()
 
                 T0tilde=tlst0[iq::nq][i]#+tu0[iq]
@@ -361,14 +372,12 @@ if __name__ == "__main__":
                     lc = 2.0 - lc
                 
 #                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
-                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="KIC"+str(kicint)+"s"+str(lab),savedir="mocklc")
+#                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")
 
-                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=1001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="mocklc")
-                print(len(lcs),len(lcsw))
-
-                starinfo=[mstar,rstar]                                   
-
-                np.savez("mocklc/mock"+str(kicint),[lab],lcs,lcsw,starinfo)
+#                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=1001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
+#                print(len(lcs),len(lcsw))
+#                starinfo=[mstar,rstar]                                   
+#                np.savez("mock_slctesslc/mock_slctess"+str(tic),[lab],lcs,lcsw,starinfo)
             
             ###############################################
 
@@ -384,7 +393,7 @@ if __name__ == "__main__":
                 plt.axhline(median,color="green",alpha=0.3)
                 plt.ylabel("TLS series",fontsize=18)            
                 #            plt.title("KIC"+str(kic)+" SN="+str(round(maxsn,1))+" far="+str(round(far,1))+" dp="+str(round(diff,1)))
-                plt.title("KIC"+str(kic)+" (transit injected) Pi="+str(Pinterval),fontsize=18)
+                plt.title("TIC"+str(tic)+" (transit injected) Pi="+str(Pinterval),fontsize=18)
                 plt.axvline(t0+tu0,color="orange",ls="dotted")
 
                 ax=fig.add_subplot(3,1,2)
@@ -407,6 +416,7 @@ if __name__ == "__main__":
                 plt.tick_params(labelsize=18)
                 
                 pre=tls.gen_trapzoid(ttc[mask]+tu0[iq],H,W,L,T0)
+#                pre=tls.gen_trapzoid(ttc[mask]+tu0[iq],Hp,Wp,Lp,T0p)
                 if args.m[0] == 0:    
                     pre = 1.0 - pre
                 elif args.m[0] == 1:    
@@ -424,7 +434,7 @@ if __name__ == "__main__":
 
                 plt.axvline(t0,color="red")
                     
-                plt.savefig("KIC"+str(kic)+".mock.png")
+                plt.savefig("TIC"+str(tic)+".mock.png")
                 print("t0=",tlst0[iq::nq][i]+tu0[iq])
                 print("height=",H)
                 print("L=",L)
