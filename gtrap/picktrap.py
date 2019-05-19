@@ -7,7 +7,7 @@ from astropy.io import fits
 import gtrap.read_keplerlc as kep
 import pandas as pd
 from scipy import signal 
-import os
+import os, sys
 from scipy import interpolate
 
 def getkicdir(kicnum,ddir="/sharksuck/kic/data/"):
@@ -303,10 +303,27 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     wid=int(alpha*W*daytopix)
     print("W=",W,"d")
     print("The range is between -",alpha," W to +",alpha," W." )
-    istart=ii-int(1.11*alpha*wid)
-    iend=ii+int(1.11*alpha*wid)
-    tus=np.copy(tu[istart:iend,0])
-    lcs=np.copy(lc[istart:iend,0])
+    iss=ii-int(1.11*alpha*wid)
+    iee=ii+int(1.11*alpha*wid)
+    nget=iee-iss
+    if iss<0:        
+        istart=0
+        isp=-iss
+    else:
+        istart=iss
+        isp=0
+    if iee>len(tu):
+        iend=len(tu)
+    else:
+        iend=iee
+    iep = nget+isp
+        
+    iend=min(iend,len(tu))
+    tus=np.ones(nget)*1000 #fill positive
+    lcs=np.ones(nget)*np.nanmedian(lc[istart:iend,0])
+
+    tus[isp:iep]=np.copy(tu[istart:iend,0])
+    lcs[isp:iep]=np.copy(lc[istart:iend,0])
 
     #pre classifier (check continuous null region)
     prec = True 
@@ -359,11 +376,9 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     nlcs=len(lcs)
     alphad=alpha*1.1
     tt=np.array(range(0,nlcs))*2.0*alphad/nlcs - alphad
+
     fx = interpolate.interp1d(tt, lcs)
     tx=np.array(range(0,nx))*2.0*alpha/nx - alpha
-    print("RANGE...")
-    print(np.max(tt),np.min(tt))
-    print(np.max(tx),np.min(tx))
 
     lcsx=fx(tx)
     
@@ -427,7 +442,6 @@ if __name__ == "__main__":
             nidarr=np.asarray(range(0,len(dat)))[args.nn[0]:args.nn[1]]
 
 
-    print(nidarr)
     for ii,nid in enumerate(nidarr):
         
         if args.f:        

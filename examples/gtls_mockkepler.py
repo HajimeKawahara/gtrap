@@ -417,9 +417,6 @@ if __name__ == "__main__":
             xmask=(t-T0>=-W/2)*(t-T0<=W/2)
             offsetlc=np.nanmean(det[xmask])
 
-            dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
-            print("DIFF/dur=",dTpre)
-            
             ###############################################
             ##  SUCCEED TO DETECT !!
             if dTpre < 0.25: 

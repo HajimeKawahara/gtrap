@@ -5,3 +5,21 @@
 
 - gtls_pickkepler.py pickup by TLS for all kepler LCs
 - astronet_picklc.py prediction for all kepler LCs
+
+
+## Tuning of TLS
+
+test_pick_kelp.sh : test of TLS algorithm using the clean sample of the KeLP catalog.
+test_pick_kelp.py : comparison
+
+results:
+-----------------------------------------------
+for kepler KeLP Clean
+
+gfilter smoothing 
+128 54 / 61
+100 57 / 64
+64 55 / 63
+
+
+all 67 some errors
