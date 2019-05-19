@@ -359,13 +359,11 @@ if __name__ == "__main__":
             #check answer
             if args.c:
 
-                for ixx in range(0,3):
-                    T0ansx=T0ans+Pans*ixx
-                    print("T0ansx=",T0ansx)
-                    if np.abs(T0ansx - T0) < 0.1:
-                        detection = ipick+1
-                        T0det = T0
-            
+                dTpre=np.abs((np.mod(T0,Pans) - np.mod(T0ans,Pans))/(W/2))
+                if dTpre < 0.1:
+                    detection = ipick+1
+                    T0det = T0
+                            
             if True:
 #            if dTpre < 0.25: 
                 if args.o:
@@ -457,7 +455,7 @@ if __name__ == "__main__":
 
 
     if args.c:
-        ff = open("kelp_checkoutput.100v2.txt", 'a')
+        ff = open("kelp_checkoutput.100v4.txt", 'a')
         ff.write(str(kic)+","+str(detection)+","+str(T0det)+"\n")
         ff.close()
         
