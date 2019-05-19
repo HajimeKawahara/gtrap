@@ -25,3 +25,5 @@ the near edge problem was solved.
 
 Next 100 60 / 67, 7 sample failed. why?
 
+n=3 60/67
+n=10 64/67
