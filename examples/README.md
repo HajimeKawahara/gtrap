@@ -18,8 +18,10 @@ for kepler KeLP Clean
 
 gfilter smoothing 
 128 54 / 61
-100 57 / 64
+100 60 / 67
 64 55 / 63
 
+the near edge problem was solved.
 
-all 67 some errors
+Next 100 60 / 67, 7 sample failed. why?
+

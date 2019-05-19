@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
 
     ### SETTING
-    mpdin = 48 #1d for peak search margin
+    mpdin = 16 #1/3d for peak search margin
             
     # #
     args = parser.parse_args()

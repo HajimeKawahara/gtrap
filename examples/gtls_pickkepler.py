@@ -456,7 +456,7 @@ if __name__ == "__main__":
 
 
     if args.c:
-        ff = open("kelp_checkoutput.100v2.txt", 'a')
+        ff = open("kelp_checkoutput.100v3_n10.txt", 'a')
         ff.write(str(kic)+","+str(detection)+","+str(T0det)+"\n")
         ff.close()
         
