@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
-    parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
+    parser.add_argument('-n', nargs=1, default=[1],help='Number of picking peaks', type=int)
 
     parser.add_argument('-fig', help='save figure', action='store_true')
     parser.add_argument('-c', help='Check detrended light curve', action='store_true')
@@ -183,7 +183,7 @@ if __name__ == "__main__":
     dt=1.0
     nt=len(tu[:,0])
     #L
-    nl=40
+    nl=20
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
@@ -254,11 +254,10 @@ if __name__ == "__main__":
     #========================================--
 
     ########################
-    PeakMaxindex=args.n[0]-1
+    PickPeaks=args.n[0]
+    detection=0
     
-
     for iq,tic in enumerate([ticint]):
-
 
         fac=1.0
         ffac = 8.0 #region#
@@ -270,22 +269,12 @@ if __name__ == "__main__":
         #### PEAK STATISTICS ####
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
         peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
+        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
+
         ntop = 4 # the nuber of the top peaks
         
         if len(peak) > ntop:
-
-        ### OLD ###
-#            stdc=np.nanstd(tlssn[iq::nq][peak[ntop:]]) #peak std
-#            medc=np.nanmedian(tlssn[iq::nq][peak[ntop:]])
-#            pssn=(tlssn[iq::nq][peak[0]]-medc)/stdc
-
             i = np.argmax(tlssn[iq::nq])
-            #ind=np.searchsorted(kicintccdp,kic)
-            #ccdpval=ccdp15[ind]*1.e-6
-            #pssn = tlshmax[iq::nq][i]/ccdpval
-            
-#        else:
-            #pssn = np.inf
 
 #===========CRIT 1==========================       
         if len(peak) > ntop:
@@ -306,78 +295,81 @@ if __name__ == "__main__":
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
 
-#        if maxsn > 1.8:
-#            xxcrit=10.5*np.log10(maxsn-1.8)**0.6-3.5
-#            #xxcrit=10.5*np.log10(maxsn-1.8)**0.6-1.5
-#            xxcrit=10.5*np.log10(maxsn-1.8)**0.6-0.9 #DTE
-#        else:
-#            xxcrit=0.0
+        
+        for ipick in range(0,PickPeaks):
 
-        if True:
-#        if (diff < xxcrit and diff < 8.0 and float(lent) > minlen and Pinterval > 300.0) or args.n[0]==1:
-            i = np.argmax(tlssn[iq::nq])
-            im=np.max([0,int(i-nsc*ffac)])
-            ix=np.min([nt,int(i+nsc*ffac)])
-            imn=np.max([0,int(i-nsc/2)])
-            ixn=np.min([nt,int(i+nsc/2)])
-
-
-            if args.m[0] == 0:    
-                llc=2.0 - lc[im:ix,iq]
-                llcn=2.0 - lc[imn:ixn,iq]
-
-            elif args.m[0] == 1 or args.m[0] == 2:
-                llc=lc[im:ix,iq]
-                llcn=lc[imn:ixn,iq]
-            
-            ttc=tu[im:ix,iq]
-            ttcn=tu[imn:ixn,iq]#narrow region
-
-            #PEAK VALUE
-            T0=tlst0[iq::nq][peak][0]+tu0[iq]
-            W=tlsw[iq::nq][peak][0]
-            L=tlsl[iq::nq][peak][0]
-            H=tlshmax[iq::nq][peak][0]
-
-            #################
-            print("GPU ROUGH: T0,W,L,H")
-            print(T0,W,L,H)
-            xmask=(t-T0>=-W/2)*(t-T0<=W/2)
-            offsetlc=np.nanmean(det[xmask])
-
-            dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
-            print("DIFF/dur=",dTpre)
-            
-            ###############################################
-            ##  SUCCEED TO DETECT !!
-            if dTpre < 0.25: 
-                lab = 1
-            else:
-                lab = 0
-            
+            i = peak[ipick]
+    
             if True:
-#            if dTpre < 0.25: 
-                if args.o:
-                    ttag=args.o[0].replace(".mock_slctess.txt","")
-                else:
-                    ttag="_"                
-                                
-                ff = open("steinfo_mock_slctess"+ttag+str(lab)+".txt", 'a')
-                ff.write(str(tic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
-                ff.close()
-
-                T0tilde=tlst0[iq::nq][i]#+tu0[iq]
-                ## REINVERSE
-                if args.m[0] == 0:
-                    lc = 2.0 - lc
+                #        if (diff < xxcrit and diff < 8.0 and float(lent) > minlen and Pinterval > 300.0) or args.n[0]==1:
+                i = np.argmax(tlssn[iq::nq])
+                im=np.max([0,int(i-nsc*ffac)])
+                ix=np.min([nt,int(i+nsc*ffac)])
+                imn=np.max([0,int(i-nsc/2)])
+                ixn=np.min([nt,int(i+nsc/2)])
                 
-#                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
-#                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")
+            
+                if args.m[0] == 0:    
+                    llc=2.0 - lc[im:ix,iq]
+                    llcn=2.0 - lc[imn:ixn,iq]
+                    
+                elif args.m[0] == 1 or args.m[0] == 2:
+                    llc=lc[im:ix,iq]
+                    llcn=lc[imn:ixn,iq]
+            
+                ttc=tu[im:ix,iq]
+                ttcn=tu[imn:ixn,iq]#narrow region
 
-#                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=1001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
-#                print(len(lcs),len(lcsw))
-#                starinfo=[mstar,rstar]                                   
-#                np.savez("mock_slctesslc/mock_slctess"+str(tic),[lab],lcs,lcsw,starinfo)
+                #PEAK VALUE
+                T0=tlst0[iq::nq][peak][0]+tu0[iq]
+                W=tlsw[iq::nq][peak][0]
+                L=tlsl[iq::nq][peak][0]
+                H=tlshmax[iq::nq][peak][0]
+                
+                #################
+                print("GPU ROUGH: T0,W,L,H")
+                print(T0,W,L,H)
+                xmask=(t-T0>=-W/2)*(t-T0<=W/2)
+                offsetlc=np.nanmean(det[xmask])
+                
+                dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
+                print("DIFF/dur=",dTpre)
+
+                if dTpre < 0.1:
+                    detection = ipick+1
+
+                
+                ###############################################
+                ##  SUCCEED TO DETECT !!
+                if dTpre < 0.25: 
+                    lab = 1
+                    detection = ipick+detection
+                else:
+                    lab = 0
+                    detection = ipick+detection
+                    
+                if True:
+#            if dTpre < 0.25: 
+                    if args.o:
+                        ttag=args.o[0].replace(".mock_slctess.txt","")
+                    else:
+                        ttag="_"                
+                                
+                    ff = open("steinfo_mock_slctess"+ttag+str(lab)+".txt", 'a')
+                    ff.write(str(tic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
+                    ff.close()
+
+                    T0tilde=tlst0[iq::nq][i]#+tu0[iq]
+                    ## REINVERSE
+                    if args.m[0] == 0:
+                        lc = 2.0 - lc
+                        
+                        #                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
+                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=51,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
+                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=201,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
+                    #                print(len(lcs),len(lcsw))
+                    starinfo=[mstar,rstar]                                   
+                    np.savez("mocklc_slctess/mock_slctess"+str(tic),[lab],lcs,lcsw,starinfo)
             
             ###############################################
 
@@ -440,6 +432,9 @@ if __name__ == "__main__":
                 print("L=",L)
 
 
+        ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
+        ff.write(str(tic)+","+str(detection)+","+str(T0det)+"\n")
+        ff.close()
 
 #            plt.savefig("KIC"+str(kic)+".pdf", bbox_inches="tight", pad_inches=0.0)
 #            plt.show()

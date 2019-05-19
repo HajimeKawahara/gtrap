@@ -306,7 +306,6 @@ if __name__ == "__main__":
         fac=1.0
         ffac = 8.0 #region#
 
-
         mask = (tlssn[iq::nq]>0.0)        
         std=np.std(tlssn[iq::nq][mask])
         median=np.median(tlssn[iq::nq])
@@ -314,14 +313,14 @@ if __name__ == "__main__":
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
         peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
 
-        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
-        
+        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))        
         maxsn=tlssn[iq::nq][peak][0:PickPeaks]
         Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
         far=(maxsn-median)/std
 
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
+
         for ipick in range(0,PickPeaks):
 #        if (diff < xxcrit and diff < 8.0 and float(lent) > minlen and Pinterval > 300.0) or args.n[0]==1:
             i = peak[ipick]
@@ -357,7 +356,7 @@ if __name__ == "__main__":
 
             #check answer
             if args.c:
-
+                
                 for ixx in range(0,3):
                     T0ansx=T0ans+Pans*ixx
                     print("T0ansx=",T0ansx)
