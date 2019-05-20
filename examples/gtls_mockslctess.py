@@ -44,7 +44,7 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
 
     ### SETTING
-    mpdin = 16 #1/3d for peak search margin
+    mpdin = 48 #1/3d for peak search margin
             
     # #
     args = parser.parse_args()
@@ -57,7 +57,6 @@ if __name__ == "__main__":
     rstar=dat["arr_1"][mid] #stellar radius
     mstar=dat["arr_2"][mid] #stellar mass
 
-    icdir="/pike/pipeline/step3"
 
     nlc=2001
     t, det, q, cno, ra, dec, ticint = tesstic.read_tesstic(fileone)
@@ -256,12 +255,11 @@ if __name__ == "__main__":
     ########################
     PickPeaks=args.n[0]
     detection=0
-    
+    lab=0
     for iq,tic in enumerate([ticint]):
 
         fac=1.0
         ffac = 8.0 #region#
-
 
         mask = (tlssn[iq::nq]>0.0)        
         std=np.std(tlssn[iq::nq][mask])
@@ -269,34 +267,20 @@ if __name__ == "__main__":
         #### PEAK STATISTICS ####
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
         peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
+
+        
         PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
-
-        ntop = 4 # the nuber of the top peaks
+        print("Pick PEAK=",PickPeaks)
         
-        if len(peak) > ntop:
-            i = np.argmax(tlssn[iq::nq])
-
-#===========CRIT 1==========================       
-        if len(peak) > ntop:
-            peak=peak[0:ntop]
-            peakval = tlssn[iq::nq][peak]
-            print(peakval)
-            ## dntop-1-th peak/std
-            diff=(peakval[-1]-median)/std
-        else:
-            ntop=len(peak)            
-            diff = 0.0
-#===========================================
-        
-        maxsn=tlssn[iq::nq][peak][PeakMaxindex]
+        maxsn=tlssn[iq::nq][peak][0:PickPeaks]
         Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
         far=(maxsn-median)/std
 
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
 
-        
         for ipick in range(0,PickPeaks):
+            print("##################"+str(ipick)+"##########################")
 
             i = peak[ipick]
     
@@ -319,12 +303,12 @@ if __name__ == "__main__":
             
                 ttc=tu[im:ix,iq]
                 ttcn=tu[imn:ixn,iq]#narrow region
-
+                
                 #PEAK VALUE
-                T0=tlst0[iq::nq][peak][0]+tu0[iq]
-                W=tlsw[iq::nq][peak][0]
-                L=tlsl[iq::nq][peak][0]
-                H=tlshmax[iq::nq][peak][0]
+                T0=tlst0[iq::nq][peak[ipick]]+tu0[iq]
+                W=tlsw[iq::nq][peak[ipick]]
+                L=tlsl[iq::nq][peak[ipick]]
+                H=tlshmax[iq::nq][peak[ipick]]
                 
                 #################
                 print("GPU ROUGH: T0,W,L,H")
@@ -335,19 +319,10 @@ if __name__ == "__main__":
                 dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
                 print("DIFF/dur=",dTpre)
 
-                if dTpre < 0.1:
+                if dTpre < 0.2:
                     detection = ipick+1
-
-                
-                ###############################################
-                ##  SUCCEED TO DETECT !!
-                if dTpre < 0.25: 
-                    lab = 1
-                    detection = ipick+detection
-                else:
-                    lab = 0
-                    detection = ipick+detection
-                    
+                    lab=1
+                                   
                 if True:
 #            if dTpre < 0.25: 
                     if args.o:
@@ -355,9 +330,6 @@ if __name__ == "__main__":
                     else:
                         ttag="_"                
                                 
-                    ff = open("steinfo_mock_slctess"+ttag+str(lab)+".txt", 'a')
-                    ff.write(str(tic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
-                    ff.close()
 
                     T0tilde=tlst0[iq::nq][i]#+tu0[iq]
                     ## REINVERSE
@@ -365,6 +337,7 @@ if __name__ == "__main__":
                         lc = 2.0 - lc
                         
                         #                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
+                        
                     lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=51,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
                     lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=201,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
                     #                print(len(lcs),len(lcsw))
@@ -433,7 +406,7 @@ if __name__ == "__main__":
 
 
         ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
-        ff.write(str(tic)+","+str(detection)+","+str(T0det)+"\n")
+        ff.write(str(tic)+","+str(detection)+"\n")
         ff.close()
 
 #            plt.savefig("KIC"+str(kic)+".pdf", bbox_inches="tight", pad_inches=0.0)
