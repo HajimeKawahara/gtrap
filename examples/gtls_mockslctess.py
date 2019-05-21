@@ -44,11 +44,11 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
 
     ### SETTING
-    mpdin = 48 #1/3d for peak search margin
+    mpdin = 48 #1 d for peak search margin
+    np.random.seed(1)
             
     # #
     args = parser.parse_args()
-
 
     ###get filename from the list
     mid = args.i[0]
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     #print(ideg,"deg")
     #ideg=ideg[0]
     print(ideg,"deg")
-    
+    print("P=",Porb,"day")
     mask=(tu>0.0)&(tu==tu)
 
     tmin=np.nanmin(tu[mask])
@@ -119,6 +119,14 @@ if __name__ == "__main__":
     ilc, b = gm.gentransit(tu[mask].astype(np.float64),t0,Porb,Rp,Mp,Rs,Ms,ideg,w,e,u1,u2)
     lc[mask] = lc[mask]*(2.0-ilc)
 
+    fac=0.01
+    ampS=(Rp/Rs)**2*fac*np.nanmean(lc[mask])*np.random.random(1)
+    ampC=0.5*ampS*np.random.random(1)
+    
+    ilsin=gm.gensin(tu[mask].astype(np.float64),Porb,t0,ampS)
+    ilcos=gm.gendcos(tu[mask].astype(np.float64),Porb,t0,ampC)
+    lc[mask] = lc[mask] + ilsin + ilcos
+    
     if args.fig:
         fig = plt.figure()
         ax = fig.add_subplot(211)
@@ -148,16 +156,9 @@ if __name__ == "__main__":
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
 
-    ##detrend (directly use)
-
     #median filter width
     medsmt_width = 32
-
-
     nby=1000 ## of thread
-    print(lc)
-
-    
     dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=medsmt_width,isw=0,osw=1) #detrend
     
     #set
@@ -267,7 +268,6 @@ if __name__ == "__main__":
         #### PEAK STATISTICS ####
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
         peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
-
         
         PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
         print("Pick PEAK=",PickPeaks)
@@ -278,15 +278,13 @@ if __name__ == "__main__":
 
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
+        idetect = peak[0]
         for ipick in range(0,PickPeaks):
             print("##################"+str(ipick)+"##########################")
 
-            i = peak[ipick]
-    
             if True:
-                #        if (diff < xxcrit and diff < 8.0 and float(lent) > minlen and Pinterval > 300.0) or args.n[0]==1:
-                i = np.argmax(tlssn[iq::nq])
+
+                i = peak[ipick]
                 im=np.max([0,int(i-nsc*ffac)])
                 ix=np.min([nt,int(i+nsc*ffac)])
                 imn=np.max([0,int(i-nsc/2)])
@@ -319,92 +317,27 @@ if __name__ == "__main__":
                 dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
                 print("DIFF/dur=",dTpre)
 
-                if dTpre < 0.2:
+                if dTpre < 0.1 and detection == 0:
+                    print("(*_*)/ DETECTED at n=",ipick+1)
+
                     detection = ipick+1
+                    idetect = i
                     lab=1
                                    
-                if True:
-#            if dTpre < 0.25: 
-                    if args.o:
-                        ttag=args.o[0].replace(".mock_slctess.txt","")
-                    else:
-                        ttag="_"                
-                                
 
-                    T0tilde=tlst0[iq::nq][i]#+tu0[iq]
+                    T0tilde=tlst0[iq::nq][peak[ipick]]
                     ## REINVERSE
                     if args.m[0] == 0:
                         lc = 2.0 - lc
                         
-                        #                lcs, tus, prec=pt.pick_cleaned_lc_direct(lc,tu,T0tilde,wid=100,check=True,tag="KIC"+str(kicint),savedir="mocklc")
-                        
-                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=51,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
-                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=201,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
+                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=2,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
+                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
                     #                print(len(lcs),len(lcsw))
                     starinfo=[mstar,rstar]                                   
                     np.savez("mocklc_slctess/mock_slctess"+str(tic),[lab],lcs,lcsw,starinfo)
             
             ###############################################
-
-            
-            if args.fig:
-                fig=plt.figure(figsize=(10,7.5))
-                ax=fig.add_subplot(3,1,1)
-                plt.tick_params(labelsize=18)
                 
-                plt.plot(tlst0[iq::nq]+tu0[iq],tlssn[iq::nq],color="gray")
-                plt.plot(tlst0[iq::nq][peak]+tu0[iq],tlssn[iq::nq][peak],"v",color="red",alpha=0.3)
-                plt.axvline(tlst0[iq::nq][i]+tu0[iq],color="red",alpha=0.3)
-                plt.axhline(median,color="green",alpha=0.3)
-                plt.ylabel("TLS series",fontsize=18)            
-                #            plt.title("KIC"+str(kic)+" SN="+str(round(maxsn,1))+" far="+str(round(far,1))+" dp="+str(round(diff,1)))
-                plt.title("TIC"+str(tic)+" (transit injected) Pi="+str(Pinterval),fontsize=18)
-                plt.axvline(t0+tu0,color="orange",ls="dotted")
-
-                ax=fig.add_subplot(3,1,2)
-                plt.tick_params(labelsize=18)
-                
-                plt.xlim(tlst0[iq::nq][i]-tlsw[iq::nq][i]*ffac+tu0[iq],tlst0[iq::nq][i]+tlsw[iq::nq][i]*ffac+tu0[iq])
-                ax.plot(tu[im:ix,iq]+tu0[iq],llc,".",color="gray")
-                
-                ##==================##
-                
-                mask=(ttc>0.0)
-                dip=np.abs((np.max(llc[mask])-np.min(llc[mask]))/3.0)
-                maskn=(ttcn>0.0)
-                
-                plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
-                plt.ylabel("PDCSAP",fontsize=18)
-                plt.axvline(t0,color="red")
-                
-                ax=fig.add_subplot(3,1,3)
-                plt.tick_params(labelsize=18)
-                
-                pre=tls.gen_trapzoid(ttc[mask]+tu0[iq],H,W,L,T0)
-#                pre=tls.gen_trapzoid(ttc[mask]+tu0[iq],Hp,Wp,Lp,T0p)
-                if args.m[0] == 0:    
-                    pre = 1.0 - pre
-                elif args.m[0] == 1:    
-                    pre = 1.0 + pre
-                ax.plot(ttc[mask]+tu0[iq],pre-(1.0-offsetlc),color="green")
-                ax.plot(ttc[mask]+tu0[iq],pre-(1.0-offsetlc),".",color="green",alpha=0.3)
-
-                plt.xlim(tlst0[iq::nq][i]-tlsw[iq::nq][i]*ffac+tu0[iq],tlst0[iq::nq][i]+tlsw[iq::nq][i]*ffac+tu0[iq])
-                plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
-                plt.ylabel("best matched",fontsize=18)
-                if tu0[iq]==0.0:
-                    plt.xlabel("Day",fontsize=18)
-                else:
-                    plt.xlabel("BKJD",fontsize=18)
-
-                plt.axvline(t0,color="red")
-                    
-                plt.savefig("TIC"+str(tic)+".mock.png")
-                print("t0=",tlst0[iq::nq][i]+tu0[iq])
-                print("height=",H)
-                print("L=",L)
-
-
         ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
         ff.write(str(tic)+","+str(detection)+"\n")
         ff.close()
