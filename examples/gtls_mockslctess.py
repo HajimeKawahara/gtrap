@@ -28,6 +28,7 @@ if __name__ == "__main__":
     import gtrap.picktrap as pt
 #    import gtrap.read_tesslc as tes
     import gtrap.read_tesstic as tesstic
+    import makefig
     
     start = time.time()
 
@@ -42,6 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('-fig', help='save figure', action='store_true')
     parser.add_argument('-c', help='Check detrended light curve', action='store_true')
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
+    parser.add_argument('-q', help='No injection', action='store_true')
 
     ### SETTING
     mpdin = 48 #1 d for peak search margin
@@ -90,8 +92,9 @@ if __name__ == "__main__":
     xRpmin=0.2
     xRpmax=1.0    
     Y = np.random.random()    
-    #Rp = Y*(xRpmax-xRpmin) + xRpmin
-    Rp= 1.0 ### DEBUG
+    Rp = Y*(xRpmax-xRpmin) + xRpmin
+    #    Rp= 0.7 ### DEBUG
+    
     Mp = 1.0
     
     Ms = mstar
@@ -117,7 +120,10 @@ if __name__ == "__main__":
     u2 = 0.3
     
     ilc, b = gm.gentransit(tu[mask].astype(np.float64),t0,Porb,Rp,Mp,Rs,Ms,ideg,w,e,u1,u2)
-    lc[mask] = lc[mask]*(2.0-ilc)
+    if args.q:
+        print("NO INJECTION")
+    else:
+        lc[mask] = lc[mask]*(2.0-ilc)
 
     fac=0.01
     ampS=(Rp/Rs)**2*fac*np.nanmean(lc[mask])*np.random.random(1)
@@ -125,7 +131,10 @@ if __name__ == "__main__":
     
     ilsin=gm.gensin(tu[mask].astype(np.float64),Porb,t0,ampS)
     ilcos=gm.gendcos(tu[mask].astype(np.float64),Porb,t0,ampC)
-    lc[mask] = lc[mask] + ilsin + ilcos
+    if args.q:
+        print("NO INJECTION")
+    else:
+        lc[mask] = lc[mask] + ilsin + ilcos
     
     if args.fig:
         fig = plt.figure()
@@ -317,12 +326,15 @@ if __name__ == "__main__":
                 dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
                 print("DIFF/dur=",dTpre)
 
-                if dTpre < 0.1 and detection == 0:
-                    print("(*_*)/ DETECTED at n=",ipick+1)
+                if (dTpre < 0.1 and detection == 0) or args.q :
+                    print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
 
                     detection = ipick+1
                     idetect = i
-                    lab=1
+                    if args.q:
+                        lab=0
+                    else:
+                        lab=1
                                    
 
                     T0tilde=tlst0[iq::nq][peak[ipick]]
@@ -330,18 +342,20 @@ if __name__ == "__main__":
                     if args.m[0] == 0:
                         lc = 2.0 - lc
                         
-                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=2,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
-                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
+                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
+                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
                     #                print(len(lcs),len(lcsw))
                     starinfo=[mstar,rstar]                                   
                     np.savez("mocklc_slctess/mock_slctess"+str(tic),[lab],lcs,lcsw,starinfo)
             
-            ###############################################
-                
+                    ###############################################
+                    if args.fig:
+                        makefig.trapfig(tlst0[iq::nq],tlssn[iq::nq],tlsw[iq::nq],tu[im:ix,iq],tu0[iq],llc,peak,idetect,ttc,ttcn,llcn,offsetlc,ffac,H,W,L,T0,args.m[0],tic)
+            
         ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
         ff.write(str(tic)+","+str(detection)+"\n")
         ff.close()
-
+        print(tic)
 #            plt.savefig("KIC"+str(kic)+".pdf", bbox_inches="tight", pad_inches=0.0)
 #            plt.show()
 

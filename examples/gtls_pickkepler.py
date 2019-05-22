@@ -360,12 +360,13 @@ if __name__ == "__main__":
             if args.c:
 
                 dTpre=np.abs((np.mod(T0,Pans) - np.mod(T0ans,Pans))/(W/2))
-                if dTpre < 0.1:
+                if dTpre < 0.1 and detection == 0:
                     detection = ipick+1
                     T0det = T0
-                            
-            if True:
-#            if dTpre < 0.25: 
+                    print("Detected ipick=",ipick+1)
+                    
+            if dTpre < 0.1 and detection == ipick+1:
+            #if True
                 if args.o:
                     ttag=args.o[0].replace(".pick.txt","")
                 else:
@@ -388,7 +389,7 @@ if __name__ == "__main__":
                 genericinfo=np.array([kicint,T0,tlst0[iq::nq][i]+tu0[iq]])
 
                 np.savez("picklc/pick"+str(kicint)+"_"+str(ipick),[-1],lcs,lcsw,starinfo,genericinfo)
-            
+
             ###############################################
 
             
