@@ -1,3 +1,62 @@
+def injecttransit(lc,tu,nq,mstar,rstar):
+    ############# INJECTION #################
+    
+    #f(P) propto P**-5/3
+    xPmin=3.0
+    xPmax=30.0    
+    alpha=-5/3.
+    a1=alpha+1.0
+    Y = np.random.random(nq)
+    Porb = ((xPmax**(a1) - xPmin**(a1) )*Y + xPmin**(a1))**(1/a1)
+
+    #Radius
+    xRpmin=0.2
+    xRpmax=1.0    
+    Y = np.random.random(nq)    
+    Rp = Y*(xRpmax-xRpmin) + xRpmin
+    #    Rp= 0.7 ### DEBUG
+    
+    Mp = 1.0   
+    Ms = mstar
+    Rs = rstar
+
+    a = (((Porb*u.day)**2 * G * (Ms*M_sun + Mp*M_jup) / (4*np.pi**2))**(1./3)).to(R_sun).value/Rs     
+    #b=a*np.cos(ideg/180.0*np.pi)
+    b=np.random.random()
+    ideg=np.arccos(b/a)/np.pi*180.0
+    #print(ideg,"deg")
+    #ideg=ideg[0]
+
+    
+    tux=np.copy(tu)
+    tux[tu<0.0]=None
+    tmin=np.nanmin(tux,axis=0)
+    tmax=np.nanmax(tux,axis=0)
+
+    
+    t0 = np.random.random(nq)*(tmax-tmin)+tmin
+    w = 0.0
+    e = 0.0
+    u1 = 0.1
+    u2 = 0.3
+
+    for i in range(0,nq):
+        mask=(tu[:,i]>0.0)&(tu[:,i]==tu[:,i])
+        ilc, b = gm.gentransit(tu[mask,i].astype(np.float64),t0[i],Porb[i],Rp[i],Mp,Rs[i],Ms[i],ideg[i],w,e,u1,u2)
+        if args.q or args.p:
+            print("NO INJECTION")
+        else:
+            lc[mask,i] = lc[mask,i]*(2.0-ilc)
+
+        fac=0.01
+        ampS=(Rp[i]/Rs[i])**2*fac*np.nanmean(lc[mask,i])*np.random.random(1)
+        ampC=0.5*ampS*np.random.random(1)
+        print(Porb[i],t0[i],ampS)
+        ilsin=gm.gensin(tu[mask,i].astype(np.float64),Porb[i],t0[i],ampS)
+        ilcos=gm.gendcos(tu[mask,i].astype(np.float64),Porb[i],t0[i],ampC)    
+        lc[mask,i] = lc[mask,i] + ilsin + ilcos
+    return lc
+
 if __name__ == "__main__":
     import astropy.units as u
     from astropy.constants import G, R_sun, M_sun, R_jup, M_jup
@@ -32,123 +91,49 @@ if __name__ == "__main__":
     
     start = time.time()
 
-    parser = argparse.ArgumentParser(description='GPU Mock TESS TLS')
+    parser = argparse.ArgumentParser(description='GPU Mock/Pick TESS TLS')
     parser.add_argument('-r', help='Randomly selected CTLv3/TIC/', action='store_true')
-    parser.add_argument('-i', nargs=1, help='mid (master ID)', type=int)
+    parser.add_argument('-i', nargs=1, help='mid start (master ID)', type=int)
+    parser.add_argument('-j', nargs=1, help='mid end slice (master ID)', type=int)
+
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
     parser.add_argument('-n', nargs=1, default=[1],help='Number of picking peaks', type=int)
-
     parser.add_argument('-fig', help='save figure', action='store_true')
     parser.add_argument('-c', help='Check detrended light curve', action='store_true')
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
+    parser.add_argument('-p', help='picking mode', action='store_true')
 
+    
     ### SETTING
     mpdin = 48 #1 d for peak search margin
     np.random.seed(1)
             
     # #
     args = parser.parse_args()
-
-    ###get filename from the list
-    mid = args.i[0]
+    mids=args.i[0]
+    mide=args.j[0]
+    
     dat=np.load("../data/step3.list.npz")
-    fileone=dat["arr_0"][mid]    
-    rstar=dat["arr_1"][mid] #stellar radius
-    mstar=dat["arr_2"][mid] #stellar mass
-
-
-    nlc=2001
-    t, det, q, cno, ra, dec, ticint = tesstic.read_tesstic(fileone)
-
-    #masking quality flaged bins
-    mask=(q==0)
-    t=t[mask]
-    det=det[mask]
-    cno=cno[mask]
-
-    #set arrayed bin
-    lc,tu, tu0 = tesstic.throw_tessintarray(nlc,cno,t,det,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
     
-    lc=np.array([lc]).transpose()
-    tu=np.array([tu]).transpose()
-    gapmask=(tu<0)
-    ntrue=np.array([len(tu[~gapmask])])
-    nq=1
-    tu0=np.array([tu0]) ##should change
-    ############# INJECTION #################
     
-    #f(P) propto P**-5/3
-    xPmin=3.0
-    xPmax=30.0    
-    alpha=-5/3.
-    a1=alpha+1.0
-    Y = np.random.random()
-    Porb = ((xPmax**(a1) - xPmin**(a1) )*Y + xPmin**(a1))**(1/a1)
+    ###get filename from the list
+    filelist=dat["arr_0"][mids:mide]    
+    rstar=dat["arr_1"][mids:mide] #stellar radius
+    mstar=dat["arr_2"][mids:mide] #stellar mass
+    print("N=",len(dat["arr_0"]))
 
-    #Radius
-    xRpmin=0.2
-    xRpmax=1.0    
-    Y = np.random.random()    
-    Rp = Y*(xRpmax-xRpmin) + xRpmin
-    #    Rp= 0.7 ### DEBUG
-    
-    Mp = 1.0
-    
-    Ms = mstar
-    Rs = rstar
+    nin=2000
+    lc,tu,n,ntrue,nq,inval,tu0,ticarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
 
-    a = (((Porb*u.day)**2 * G * (Ms*M_sun + Mp*M_jup) / (4*np.pi**2))**(1./3)).to(R_sun).value/Rs     
-    #b=a*np.cos(ideg/180.0*np.pi)
-    b=np.random.random()
-    ideg=np.arccos(b/a)/np.pi*180.0
-    #print(ideg,"deg")
-    #ideg=ideg[0]
-    print(ideg,"deg")
-    print("P=",Porb,"day")
-    mask=(tu>0.0)&(tu==tu)
 
-    tmin=np.nanmin(tu[mask])
-    tmax=np.nanmax(tu[mask])
-
-    t0 = np.random.random()*(tmax-tmin)+tmin
-    w = 0.0
-    e = 0.0
-    u1 = 0.1
-    u2 = 0.3
-    
-    ilc, b = gm.gentransit(tu[mask].astype(np.float64),t0,Porb,Rp,Mp,Rs,Ms,ideg,w,e,u1,u2)
-    if args.q:
+    if args.q or args.p:
         print("NO INJECTION")
     else:
-        lc[mask] = lc[mask]*(2.0-ilc)
-
-    fac=0.01
-    ampS=(Rp/Rs)**2*fac*np.nanmean(lc[mask])*np.random.random(1)
-    ampC=0.5*ampS*np.random.random(1)
-    
-    ilsin=gm.gensin(tu[mask].astype(np.float64),Porb,t0,ampS)
-    ilcos=gm.gendcos(tu[mask].astype(np.float64),Porb,t0,ampC)
-    if args.q:
-        print("NO INJECTION")
-    else:
-        lc[mask] = lc[mask] + ilsin + ilcos
-    
-    if args.fig:
-        fig = plt.figure()
-        ax = fig.add_subplot(211)
-        ax.axvline(t0)
-        ax.plot(tu,lc,".")
-        plt.ylim(np.min(lc[lc>0.0]),np.max(lc))
-        ax = fig.add_subplot(212)
-        ax.axvline(t0)
-        ax.plot(tu,lc,".")
-        plt.ylim(np.min(lc[lc>0.0]),np.max(lc))
-        plt.xlim(t0-1,t0+1)
-        plt.savefig("test.png")
-    #########################################
+        lc=injecttransit(lc,tu,nq,mstar,rstar)
+        
     
     ## for transit ##
     if args.m[0] == 0:
@@ -161,9 +146,8 @@ if __name__ == "__main__":
     else:
         sys.exit("No mode")
     ###############
+
     
-    elapsed_time = time.time() - start
-    print (("2 :{0}".format(elapsed_time)) + "[sec]")
 
     #median filter width
     medsmt_width = 32
@@ -237,7 +221,7 @@ if __name__ == "__main__":
     sharedsize=(2*nsc + nw + 2)*4 #byte
     print("sharedsize=",sharedsize)
     #gtls
-    start = time.time()
+#    start = time.time()
     if args.m[0] == 2:
         source_module=gtls.gtls_module("absolute")
     else:
@@ -259,15 +243,13 @@ if __name__ == "__main__":
     cuda.memcpy_dtoh(tlsl, dev_tlsl)
     cuda.memcpy_dtoh(tlshmax, dev_tlshmax)
 
-
     #========================================--
 
     ########################
     PickPeaks=args.n[0]
-    detection=0
-    lab=0
-    for iq,tic in enumerate([ticint]):
-
+    for iq,tic in enumerate(ticarr):
+        detection=0
+        lab=0
         fac=1.0
         ffac = 8.0 #region#
 
@@ -320,19 +302,22 @@ if __name__ == "__main__":
                 #################
                 print("GPU ROUGH: T0,W,L,H")
                 print(T0,W,L,H)
-                xmask=(t-T0>=-W/2)*(t-T0<=W/2)
-                offsetlc=np.nanmean(det[xmask])
-                
-                dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
+
+                if args.q or args.p:
+                    dTpre=0.0
+                else:
+                    dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[iq],Porb))/(W/2))
                 print("DIFF/dur=",dTpre)
 
-                if (dTpre < 0.1 and detection == 0) or args.q :
-                    print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
+                if (dTpre < 0.1 and detection == 0) or args.q or args.p:
+                    #print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
 
                     detection = ipick+1
                     idetect = i
                     if args.q:
                         lab=0
+                    elif args.p:
+                        lab=-1
                     else:
                         lab=1
                                    
@@ -341,21 +326,33 @@ if __name__ == "__main__":
                     ## REINVERSE
                     if args.m[0] == 0:
                         lc = 2.0 - lc
-                        
-                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
-                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
-                    #                print(len(lcs),len(lcsw))
-                    starinfo=[mstar,rstar]                                   
-                    np.savez("mocklc_slctess/mock_slctess"+str(tic),[lab],lcs,lcsw,starinfo)
-            
+
+                    if True:
+#                    try:
+                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
+                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
+                        #                print(len(lcs),len(lcsw))
+                        starinfo=[mstar,rstar]
+                        if args.p:
+                            np.savez("picklc_slctess/pick_slctess"+str(tic)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
+                        else:
+                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
+
+
+    elapsed_time = time.time() - start
+    print (("2 :{0}".format(elapsed_time)) + "[sec]")
+    print (elapsed_time/(mide-mids), "[sec/N]")
+
+                            #                    except:
+#                        print("SOME ERROR for SAVE")
                     ###############################################
-                    if args.fig:
-                        makefig.trapfig(tlst0[iq::nq],tlssn[iq::nq],tlsw[iq::nq],tu[im:ix,iq],tu0[iq],llc,peak,idetect,ttc,ttcn,llcn,offsetlc,ffac,H,W,L,T0,args.m[0],tic)
+#                    if args.fig:
+#                        makefig.trapfig(tlst0[iq::nq],tlssn[iq::nq],tlsw[iq::nq],tu[im:ix,iq],tu0[iq],llc,peak,idetect,ttc,ttcn,llcn,offsetlc,ffac,H,W,L,T0,args.m[0],tic)
             
-        ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
-        ff.write(str(tic)+","+str(detection)+"\n")
-        ff.close()
-        print(tic)
+#        ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
+#        ff.write(str(tic)+","+str(detection)+"\n")
+#        ff.close()
+#        print(tic)
 #            plt.savefig("KIC"+str(kic)+".pdf", bbox_inches="tight", pad_inches=0.0)
 #            plt.show()
 

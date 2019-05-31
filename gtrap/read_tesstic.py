@@ -5,27 +5,29 @@ import numpy as np
 import h5py
 import sys
 import pandas as pd
-def load_tesstic(filelist,offt="t[0]",nby=1000):
+def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
     
     inval=-1000.0 #invalid time
-    nq=1 # # of bacth
+    nq=len(filelist) # # of bacth
     lc=[]
     tu=[]
     ntrue=[]
-    t0arr=[]
-    nfile=len(filelist)
+    tu0=[]
+    ticarr=[]
+    while np.mod(n,nby)>0:
+        n=n+1
 
-    
     for k in range(0,nq):
-        t, det, q, cno, ra, dec =read_tesstic(filelist)
+        t, det, q, cno, ra, dec, tic =read_tesstic(filelist[k])
 
-        n=int(cno[-1]-cno[0]+1)
-        while np.mod(n,nby)>0:
-            n=n+1
+        if good_quality:
+            #masking quality flaged bins
+            mask=(q==0)
+            t=t[mask]
+            det=det[mask]
+            cno=cno[mask]
         
-        t0arr.append(t[0])
-        
-        lcn, tun=throw_tessintarray(n,cno,t,det,fillvalv=1.002,fillvalt=inval,offt=offt)        
+        lcn, tun, t0=throw_tessintarray(n,cno,t,det,fillvalv=1.002,fillvalt=inval,offt=offt)        
         gapmask=(tun<0)
         ntrue.append(len(tun[~gapmask]))
         Hfill=np.max(lcn)
@@ -35,16 +37,19 @@ def load_tesstic(filelist,offt="t[0]",nby=1000):
         lcn[::2][maskL]=Lfill
         lcn[1::2][maskH]=Hfill
         tu.append(tun)
-        lc.append(lcn)
+        lc.append(lcn)        
+        tu0.append(t0)
+        ticarr.append(tic)
+        
     lc=np.array(lc).transpose().astype(np.float32)
     tu=np.array(tu).transpose().astype(np.float32)
     ntrue=np.array(ntrue).astype(np.uint32)
-
+    tu0=np.array(tu0)
     ##original masked data
 #    mask=(t==t)
 #    t=t[mask]
 #    det=det[mask]
-    return lc,tu,n,ntrue,nq,inval
+    return lc,tu,n,ntrue,nq,inval,tu0,ticarr
 
 
 def read_tesstic(hdf):
@@ -96,16 +101,24 @@ def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
 if __name__ == "__main__":
 
     mid=1000
+    mide=1010
     
     dat=np.load("../data/step3.list.npz")
-    fileone=dat["arr_0"][mid]
-    rad=dat["arr_1"][mid] #stellar radius
-    mass=dat["arr_2"][mid] #stellar mass
+    filelist=dat["arr_0"][mid:mide]
+    rad=dat["arr_1"][mid:mide] #stellar radius
+    mass=dat["arr_2"][mid:mide] #stellar mass
 
-    print(fileone)
-    time, flux, q, cno, ra, dec, tic = read_tesstic(fileone)
-    print(tic)
-    n=1500
-    lcn,tun = throw_tessintarray(n,cno,time,flux,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
-    print(lcn)
+    nin=1300
+    lc,tu,n,ntrue,nq,inval=load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+
+    print(lc,n,ntrue)
+    
+#    for i in range(0,10):
+#        t, det, q, cno, ra, dec, tic = read_tesstic(filelist[i])
+#        print(tic)
+#        n=1500
+#        inval=0
+#        offt=0.0
+#        lcn, tun, t0=throw_tessintarray(n,cno,t,det,fillvalv=1.002,fillvalt=inval,offt=offt)        
+#    print(lcn)
 

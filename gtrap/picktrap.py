@@ -30,6 +30,7 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     mask=(tu>0.0)
     tuu=tu[mask]
     i=np.searchsorted(tuu,T0)
+
     numar=np.array(range(0,len(tu)))
     ii=numar[tuu[i]==tu[:,0]][0]
 
@@ -62,6 +63,8 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
         print(isp,iep,istart,iend,iss,iee,nget,len(tu))
         sys.exit()
     #pre classifier (check continuous null region)
+
+    
     prec = True 
     if len(tus) == 0:
         prec=False
@@ -110,14 +113,36 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     ### NORMALIZE
     lcs=(lcs-np.mean(lcs))/np.std(lcs)
     nlcs=len(lcs)
-    alphad=alpha*1.1
+    alphad=alpha*1.5
     tt=np.array(range(0,nlcs))*2.0*alphad/nlcs - alphad
 
     fx = interpolate.interp1d(tt, lcs)
     tx=np.array(range(0,nx))*2.0*alpha/nx - alpha
 
-    lcsx=fx(tx)
     
+    try:
+        lcsx=fx(tx)
+    except:
+        print("Interpolate Failed")
+        print("Consider to increase alphad in picktrap.py")
+        lcsx=np.ones(len(tx))
+        
+    #fig=plt.figure()
+    #ax=fig.add_subplot(211)
+    #ax.plot(tu,lc,".")
+    #ax.plot(tu[istart:iend,0],lc[istart:iend,0],".",color="red")
+    #plt.axvline(T0)
+    #plt.xlim(0,np.max(tu))
+    #ax=fig.add_subplot(212)
+    #ax.plot(tt,lcs,".",color="red")
+    #for i in tx:
+    #    plt.axvline(i,alpha=0.2)
+    #plt.savefig("../examples/test.png")
+    #print(tus)
+    #print(lcs)
+#    sys.exit()
+
+        
     if check:
         fig=plt.figure()
         ax=fig.add_subplot(211)
@@ -135,6 +160,7 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
 
         plt.xlabel("time (W)")
         plt.ylabel("WNC vector")
+        #plt.savefig("../examples/test2.png")
         plt.savefig(os.path.join(savedir,tag+".png"))
         #        plt.show()
         

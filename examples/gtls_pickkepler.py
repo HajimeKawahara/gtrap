@@ -364,9 +364,11 @@ if __name__ == "__main__":
                     detection = ipick+1
                     T0det = T0
                     print("Detected ipick=",ipick+1)
+                condition = (dTpre < 0.1 and detection == ipick+1)
+            else:
+                condition = True
                     
-            if dTpre < 0.1 and detection == ipick+1:
-            #if True
+            if condition:
                 if args.o:
                     ttag=args.o[0].replace(".pick.txt","")
                 else:
