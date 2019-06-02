@@ -14,11 +14,14 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
     ntrue=[]
     tu0=[]
     ticarr=[]
+    sectorarr=[]
+    cameraarr=[]
+    CCDarr=[]
     while np.mod(n,nby)>0:
         n=n+1
 
     for k in range(0,nq):
-        t, det, q, cno, ra, dec, tic =read_tesstic(filelist[k])
+        t, det, q, cno, ra, dec, tic, sector, camera, CCD =read_tesstic(filelist[k])
 
         if good_quality:
             #masking quality flaged bins
@@ -40,6 +43,9 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
         lc.append(lcn)        
         tu0.append(t0)
         ticarr.append(tic)
+        sectorarr.append(sector)
+        cameraarr.append(camera)
+        CCDarr.append(CCD)
         
     lc=np.array(lc).transpose().astype(np.float32)
     tu=np.array(tu).transpose().astype(np.float32)
@@ -49,7 +55,7 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
 #    mask=(t==t)
 #    t=t[mask]
 #    det=det[mask]
-    return lc,tu,n,ntrue,nq,inval,tu0,ticarr
+    return lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr
 
 
 def read_tesstic(hdf):
@@ -69,7 +75,11 @@ def read_tesstic(hdf):
         ra=f["header"]["ra"].value                        
         dec=f["header"]["dec"].value                        
         tic=f["header"]["TID"].value
-        return time, flux, q, cno, ra, dec, tic
+        sector=f["header"]["sector"].value
+        camera=f["header"]["camera"].value
+        CCD=f["header"]["CCD"].value
+
+        return time, flux, q, cno, ra, dec, tic, sector, camera, CCD
 
 
 def throw_tessintarray(n,cno,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):

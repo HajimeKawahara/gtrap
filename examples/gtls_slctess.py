@@ -13,8 +13,8 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     xRpmin=0.2
     xRpmax=1.0    
     Y = np.random.random(nq)    
-    Rp = Y*(xRpmax-xRpmin) + xRpmin
-    #    Rp= 0.7 ### DEBUG
+    #    Rp = Y*(xRpmax-xRpmin) + xRpmin
+    Rp= 0.7 ### DEBUG
     
     Mp = 1.0   
     Ms = mstar
@@ -115,7 +115,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     mids=args.i[0]
     mide=args.j[0]
-    
+    pickonly = False
+#    pickonly = args.p
+
     dat=np.load("../data/step3.list.npz")
     
     
@@ -126,10 +128,10 @@ if __name__ == "__main__":
     print("N=",len(dat["arr_0"]))
 
     nin=2000
-    lc,tu,n,ntrue,nq,inval,tu0,ticarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
 
 
-    if args.q or args.p:
+    if args.q or pickonly:
         print("NO INJECTION")
     else:
         lc=injecttransit(lc,tu,nq,mstar,rstar)
@@ -303,20 +305,20 @@ if __name__ == "__main__":
                 print("GPU ROUGH: T0,W,L,H")
                 print(T0,W,L,H)
 
-                if args.q or args.p:
+                if args.q or pickonly:
                     dTpre=0.0
                 else:
                     dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[iq],Porb))/(W/2))
                 print("DIFF/dur=",dTpre)
 
-                if (dTpre < 0.1 and detection == 0) or args.q or args.p:
+                if (dTpre < 0.1 and detection == 0) or args.q or pickonly:
                     #print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
 
                     detection = ipick+1
                     idetect = i
                     if args.q:
                         lab=0
-                    elif args.p:
+                    elif pickonly:
                         lab=-1
                     else:
                         lab=1
@@ -328,13 +330,18 @@ if __name__ == "__main__":
                         lc = 2.0 - lc
 
                     if True:
-#                    try:
-                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(tic)+"s"+str(lab),savedir="mocklc_slctess")      
-                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(tic)+"w"+str(lab),savedir="mocklc_slctess")
+                        sector=sectorarr[iq]
+                        camera=cameraarr[iq]
+                        CCD=CCDarr[iq]
+
+                        ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
+                        #                    try:
+                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(ticname)+"s"+str(lab),savedir="mocklc_slctess")      
+                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(ticname)+"w"+str(lab),savedir="mocklc_slctess")
                         #                print(len(lcs),len(lcsw))
-                        starinfo=[mstar,rstar]
-                        if args.p:
-                            np.savez("picklc_slctess/pick_slctess"+str(tic)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
+                        starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
+                        if pickonly:
+                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
                         else:
                             np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
 
