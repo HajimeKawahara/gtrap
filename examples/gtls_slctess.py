@@ -14,7 +14,7 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     xRpmax=1.0    
     Y = np.random.random(nq)    
     #    Rp = Y*(xRpmax-xRpmin) + xRpmin
-    Rp= 0.7 ### DEBUG
+    Rp= 1.0*np.ones(nq) ### DEBUG
     
     Mp = 1.0   
     Ms = mstar
@@ -43,19 +43,16 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     for i in range(0,nq):
         mask=(tu[:,i]>0.0)&(tu[:,i]==tu[:,i])
         ilc, b = gm.gentransit(tu[mask,i].astype(np.float64),t0[i],Porb[i],Rp[i],Mp,Rs[i],Ms[i],ideg[i],w,e,u1,u2)
-        if args.q or args.p:
-            print("NO INJECTION")
-        else:
-            lc[mask,i] = lc[mask,i]*(2.0-ilc)
+        lc[mask,i] = lc[mask,i]*(2.0-ilc)
 
         fac=0.01
         ampS=(Rp[i]/Rs[i])**2*fac*np.nanmean(lc[mask,i])*np.random.random(1)
         ampC=0.5*ampS*np.random.random(1)
-        print(Porb[i],t0[i],ampS)
+        #print(Porb[i],t0[i],ampS)
         ilsin=gm.gensin(tu[mask,i].astype(np.float64),Porb[i],t0[i],ampS)
         ilcos=gm.gendcos(tu[mask,i].astype(np.float64),Porb[i],t0[i],ampC)    
         lc[mask,i] = lc[mask,i] + ilsin + ilcos
-    return lc
+    return lc, Porb, t0
 
 if __name__ == "__main__":
     import astropy.units as u
@@ -115,8 +112,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     mids=args.i[0]
     mide=args.j[0]
-    pickonly = False
-#    pickonly = args.p
+#    pickonly = False
+    pickonly = args.p
 
     dat=np.load("../data/step3.list.npz")
     
@@ -130,11 +127,10 @@ if __name__ == "__main__":
     nin=2000
     lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
 
-
     if args.q or pickonly:
         print("NO INJECTION")
     else:
-        lc=injecttransit(lc,tu,nq,mstar,rstar)
+        lc,Porb,t0=injecttransit(lc,tu,nq,mstar,rstar)
         
     
     ## for transit ##
@@ -152,7 +148,7 @@ if __name__ == "__main__":
     
 
     #median filter width
-    medsmt_width = 32
+    medsmt_width = 50
     nby=1000 ## of thread
     dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=medsmt_width,isw=0,osw=1) #detrend
     
@@ -271,7 +267,8 @@ if __name__ == "__main__":
 
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-        idetect = peak[0]
+
+
         for ipick in range(0,PickPeaks):
             print("##################"+str(ipick)+"##########################")
 
@@ -304,18 +301,18 @@ if __name__ == "__main__":
                 #################
                 print("GPU ROUGH: T0,W,L,H")
                 print(T0,W,L,H)
-
+                
                 if args.q or pickonly:
                     dTpre=0.0
                 else:
-                    dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[iq],Porb))/(W/2))
+                    dTpre=np.abs((np.mod(T0,Porb[iq]) - np.mod(t0[iq]+tu0[iq],Porb[iq]))/(W/2))
                 print("DIFF/dur=",dTpre)
 
+#                if True:
                 if (dTpre < 0.1 and detection == 0) or args.q or pickonly:
-                    #print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
+                    print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
 
                     detection = ipick+1
-                    idetect = i
                     if args.q:
                         lab=0
                     elif pickonly:
@@ -336,14 +333,14 @@ if __name__ == "__main__":
 
                         ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
                         #                    try:
-                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(ticname)+"s"+str(lab),savedir="mocklc_slctess")      
-                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(ticname)+"w"+str(lab),savedir="mocklc_slctess")
+                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(ticname)+"s"+str(lab),savedir="mocklc_slctess")      
+                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(ticname)+"w"+str(lab),savedir="mocklc_slctess")
                         #                print(len(lcs),len(lcsw))
                         starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                         if pickonly:
                             np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
                         else:
-                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
+                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,starinfo)
 
 
     elapsed_time = time.time() - start

@@ -32,7 +32,7 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     i=np.searchsorted(tuu,T0)
 
     numar=np.array(range(0,len(tu)))
-    ii=numar[tuu[i]==tu[:,0]][0]
+    ii=numar[tuu[i]==tu][0]
 
     wid=int(alpha*W*daytopix)
     print("W=",W,"d")
@@ -54,10 +54,10 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
         
     iend=min(iend,len(tu))
     tus=np.ones(nget)*1000 #fill positive
-    lcs=np.ones(nget)*np.nanmedian(lc[istart:iend,0])
+    lcs=np.ones(nget)*np.nanmedian(lc[istart:iend])
     try:
-        tus[isp:iep]=np.copy(tu[istart:iend,0])
-        lcs[isp:iep]=np.copy(lc[istart:iend,0])
+        tus[isp:iep]=np.copy(tu[istart:iend])
+        lcs[isp:iep]=np.copy(lc[istart:iend])
     except:
         print("isp,iep,istart,iend,iss,iee,nget,len(tu)")
         print(isp,iep,istart,iend,iss,iee,nget,len(tu))
@@ -165,7 +165,7 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
         #        plt.show()
         
     if lcout:
-        return lcs, tus, lc[istart:iend,0], tu[istart:iend,0], lc[:,0], tu[:,0], prec
+        return lcs, tus, lc[istart:iend], tu[istart:iend], lc, tu, prec
     else:
         return lcsx, tx, prec
 

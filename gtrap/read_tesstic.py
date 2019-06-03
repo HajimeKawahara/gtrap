@@ -121,7 +121,7 @@ if __name__ == "__main__":
     nin=1300
     lc,tu,n,ntrue,nq,inval=load_tesstic(filelist,nin,offt="t[0]",nby=1000)
 
-    print(lc,n,ntrue)
+#    print(lc,n,ntrue)
     
 #    for i in range(0,10):
 #        t, det, q, cno, ra, dec, tic = read_tesstic(filelist[i])

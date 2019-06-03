@@ -22,7 +22,7 @@ def makearr(flist):
     Xw=[]
     info=[]
     for fn in flist:
-        d=np.load(fn)
+        d=np.load(fn,allow_pickle=True)
         lab.append(d["arr_0"][0])
         Xtmp=d["arr_1"]
         Xtmp[Xtmp!=Xtmp]=0.0
