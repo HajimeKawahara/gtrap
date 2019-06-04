@@ -13,8 +13,8 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     xRpmin=0.2
     xRpmax=1.0    
     Y = np.random.random(nq)    
-    #    Rp = Y*(xRpmax-xRpmin) + xRpmin
-    Rp= 1.0*np.ones(nq) ### DEBUG
+    Rp = Y*(xRpmax-xRpmin) + xRpmin
+    #Rp= 1.0*np.ones(nq) ### DEBUG
     
     Mp = 1.0   
     Ms = mstar
