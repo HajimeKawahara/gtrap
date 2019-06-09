@@ -2,7 +2,7 @@ rm -f step3.list
 #ls -1 /pike/pipeline/step3/tess_*_1_1_*.h5 > step3.list
 #ls -1 /pike/pipeline/step3/tess_*_1_2_*.h5 > step3.list
 echo "FILE" > step3.list
-for i in `seq 24`
+for i in `seq 26`
 do
     for j in `seq 4`
     do

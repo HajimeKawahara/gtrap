@@ -4,7 +4,7 @@ import numpy as np
 import mysql.connector
 from urllib.parse import urlparse
 
-dat=pd.read_csv("../data/step3.list")
+dat=pd.read_csv("../data/TIC3.list")
 rad=[]
 mass=[]
 #mysql -h 133.11.231.118 -u {user} -p TESS
@@ -35,4 +35,4 @@ for fn in dat["FILE"]:
         mass.append(-1.0)
 rad=np.array(rad)
 mass=np.array(mass)
-np.savez("step3.list.npz",dat["FILE"],rad,mass)
+np.savez("TIC3.list.npz",dat["FILE"],rad,mass)
