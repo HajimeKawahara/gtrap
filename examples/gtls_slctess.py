@@ -116,7 +116,7 @@ if __name__ == "__main__":
     pickonly = args.p
 
     dat=np.load("../data/step3.list.npz")
-    
+#    dat=np.load("../data/TIC3.list.npz")
     
     ###get filename from the list
     filelist=dat["arr_0"][mids:mide]    
@@ -331,10 +331,16 @@ if __name__ == "__main__":
                         camera=cameraarr[iq]
                         CCD=CCDarr[iq]
 
+                        if pickonly:
+                            savpng="png"
+                            tag="TIC"+str(ticname)+"s"+str(lab)
+                        else:
+                            savpng="mocklc_slctess/png"
+                            tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
                         ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
                         #                    try:
-                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=True,tag="TIC"+str(ticname)+"s"+str(lab),savedir="mocklc_slctess")      
-                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=True,tag="TIC"+str(ticname)+"w"+str(lab),savedir="mocklc_slctess")
+                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=args.fig,tag=tag,savedir=savpng)      
+                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=args.fig,tag=tag,savedir=savpng)
                         #                print(len(lcs),len(lcsw))
                         starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                         if pickonly:

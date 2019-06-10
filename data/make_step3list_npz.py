@@ -21,7 +21,7 @@ j=0
 nlen=len(dat["FILE"])
 for fn in dat["FILE"]:
     j=j+1
-    if(np.mod(j,100000)==0):
+    if(np.mod(j,10000)==0):
         print(j,"/",nlen)
     tic=fn.split("_")[1]
     try:
