@@ -1,3 +1,8 @@
+How to use astronet...
+/bin/bash
+conda activate tf-gpu
+
+
 
 # Kepler STE
 
