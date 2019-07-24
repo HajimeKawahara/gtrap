@@ -1,7 +1,20 @@
+
+# NN
 How to use astronet...
 /bin/bash
 conda activate tf-gpu
 
+
+# TESS (SLC)
+
+## When updating the LCs
+
+- 0.1 generate data list 
+
+
+
+
+- gtls_slctess.py -- mock and pick by the TLS
 
 
 # Kepler STE
@@ -18,6 +31,3 @@ conda activate tf-gpu
 test_pick_kelp.sh : test of TLS algorithm using the clean sample of the KeLP catalog.
 test_pick_kelp.py : comparison
 
-# TESS (SLC)
-
-- gtls_slctess.py -- mock and pick by the TLS
