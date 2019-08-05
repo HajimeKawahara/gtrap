@@ -103,6 +103,8 @@ if __name__ == "__main__":
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')
 
+
+    listname="../data/ctl.list/ctl.list_1_1_1.npz"
     
     ### SETTING
     mpdin = 48 #1 d for peak search margin
@@ -115,7 +117,7 @@ if __name__ == "__main__":
 #    pickonly = False
     pickonly = args.p
 
-    dat=np.load("../data/step3.list.npz")
+    dat=np.load(listname)
 #    dat=np.load("../data/TIC3.list.npz")
     
     ###get filename from the list
