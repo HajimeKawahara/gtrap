@@ -10,9 +10,9 @@ conda activate tf-gpu
 ## When updating the LCs
 
 - 0.1 generate data list 
+data/python_updatelist/make_list_sector.py
 
-
-
+liss are in data/ctl.list
 
 - gtls_slctess.py -- mock and pick by the TLS
 
