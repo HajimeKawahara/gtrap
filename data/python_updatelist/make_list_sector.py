@@ -13,9 +13,6 @@ p_work = {
          "jobs" : 30,
 }
 
-rad=[]
-mass=[]
-files=[]
 #mysql -h 133.11.231.118 -u {user} -p TESS
 #url = urlparse('mysql://fisher:atlantic@133.11.231.118:3306/TESS')
 url = urlparse('mysql://fisher:atlantic@133.11.229.168:3306/TESS')
@@ -33,7 +30,9 @@ cur = conn.cursor()
 for sector in p_work["sector"]:
     for camera in p_work["camera"]:
         for chip in p_work["camera"]:
-
+            rad=[]
+            mass=[]
+            files=[]
 
 #for sector in [1]:
 #    for camera in [1]:
@@ -46,8 +45,8 @@ for sector in p_work["sector"]:
             for fn in h5list:
                 files.append(fn)
                 j=j+1
-                if(np.mod(j,10000)==0):
-                    print(j,"/",nlen)
+#                if(np.mod(j,1000)==0):
+#                    print(j,"/",nlen)
                 tic=fn.split("_")[1]
                 try:
             #        cur.execute('SELECT rad,mass FROM CTLv7 where ID='+str(tic))
@@ -60,7 +59,6 @@ for sector in p_work["sector"]:
                 except:
                     rad.append(-1.0)
                     mass.append(-1.0)
-rad=np.array(rad)
-mass=np.array(mass)
-    
-np.savez("ctl.list.npz",files,rad,mass)
+            rad=np.array(rad)
+            mass=np.array(mass)    
+            np.savez("../data/ctl.list/ctl.list_"+str(tag)+".npz",files,rad,mass)
