@@ -54,6 +54,7 @@ def injecttransit(lc,tu,nq,mstar,rstar):
         lc[mask,i] = lc[mask,i] + ilsin + ilcos
     return lc, Porb, t0
 
+
 if __name__ == "__main__":
     import astropy.units as u
     from astropy.constants import G, R_sun, M_sun, R_jup, M_jup
@@ -101,31 +102,60 @@ if __name__ == "__main__":
     parser.add_argument('-c', help='Check detrended light curve', action='store_true')
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
-    parser.add_argument('-p', help='picking mode', action='store_true')
-
-
-    listname="../data/ctl.list/ctl.list_1_1_1.npz"
+    parser.add_argument('-p', help='picking mode', action='store_true')    
     
     ### SETTING
     mpdin = 48 #1 d for peak search margin
     np.random.seed(1)
             
-    # #
     args = parser.parse_args()
-    mids=args.i[0]
-    mide=args.j[0]
+    midsx=args.i[0]
+    midex=args.j[0]
 #    pickonly = False
     pickonly = args.p
 
-    dat=np.load(listname)
-#    dat=np.load("../data/TIC3.list.npz")
-    
     ###get filename from the list
-    filelist=dat["arr_0"][mids:mide]    
-    rstar=dat["arr_1"][mids:mide] #stellar radius
-    mstar=dat["arr_2"][mids:mide] #stellar mass
-    print("N=",len(dat["arr_0"]))
+    igname="../data/ctl.list/igtrap.list"
+    datc=np.load(igname)
+    taglist=datc["arr_0"]
+    tagnum=datc["arr_1"]
+    itag=np.searchsorted(tagnum,midsx)
+    itage=np.searchsorted(tagnum,midex)
 
+    if itag==itage:    
+        tag=tagnum[itag]        
+        listname="../data/ctl.list/ctl.list_"+tag+".npz"
+        dat=np.load(listname)
+        igtrap=dat["arr_0"]
+        mids=np.searchsorted(igtrap,midsx)
+        mide=np.searchsorted(igtrap,midex)
+        filelist=dat["arr_1"][mids:mide]    
+        rstar=dat["arr_2"][mids:mide] #stellar radius
+        mstar=dat["arr_3"][mids:mide] #stellar mass        
+    else:
+        tag=tagnum[itag]        
+        listname="../data/ctl.list/ctl.list_"+tag+".npz"
+        dat=np.load(listname)
+        igtrap=dat["arr_0"]
+        mids=np.searchsorted(igtrap,midsx)
+        filelist=dat["arr_1"][mids:]    
+        rstar=dat["arr_2"][mids:] #stellar radius
+        mstar=dat["arr_3"][mids:] #stellar mass        
+
+        tag=tagnum[itage]        
+        listname="../data/ctl.list/ctl.list_"+tag+".npz"
+        dat=np.load(listname)
+        igtrap=dat["arr_0"]
+        mide=np.searchsorted(igtrap,midex)
+        filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
+        rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
+        mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
+    
+    print("N=",len(dat["arr_0"]))
+    print(filelist)
+    sys.exit()
+
+    
     nin=2000
     lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
 

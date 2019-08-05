@@ -77,7 +77,7 @@ def read_tesstic(hdf):
         tic=f["header"]["TID"].value
         sector=f["header"]["sector"].value
         camera=f["header"]["camera"].value
-        CCD=f["header"]["CCD"].value
+        CCD=f["header"]["chip"].value
 
         return time, flux, q, cno, ra, dec, tic, sector, camera, CCD
 

@@ -26,24 +26,28 @@ conn = mysql.connector.connect(
 cur = conn.cursor()
 
 
-
+icnt=0
+f = open("../ctl.list/igtrap.list","w")
 for sector in p_work["sector"]:
     for camera in p_work["camera"]:
         for chip in p_work["camera"]:
+#for sector in [1]:
+#    for camera in [1]:
+#        for chip in [1,2]:
+
             rad=[]
             mass=[]
             files=[]
-
-#for sector in [1]:
-#    for camera in [1]:
-#        for chip in [1]:        
-            h5list = vmi.glob_h5(p_work["data_type"], sector, camera, chip, 1)
+            igtrap=[]
+            h5list = vmi.glob_h5(p_work["data_type"], sector, camera, chip, 2)
             j=0
             nlen=len(h5list)
             tag=str(sector)+"_"+str(camera)+"_"+str(chip)
-#            print(h5list)
+            #            print(h5list)
+            f.write(tag+","+str(icnt+1)+",")
             for fn in h5list:
                 files.append(fn)
+                igtrap.append(icnt)
                 j=j+1
 #                if(np.mod(j,1000)==0):
 #                    print(j,"/",nlen)
@@ -54,11 +58,16 @@ for sector in p_work["sector"]:
                     out=cur.fetchall()[0]
                     out=np.array(out) #rad, mass
                     rad.append(out[0])
-                    mass.append(out[1]) 
+                    mass.append(out[1])
 #                    print(rad,mass)
                 except:
                     rad.append(-1.0)
                     mass.append(-1.0)
+                    
+                icnt=icnt+1
+
             rad=np.array(rad)
             mass=np.array(mass)    
-            np.savez("../data/ctl.list/ctl.list_"+str(tag)+".npz",files,rad,mass)
+            np.savez("../ctl.list/ctl.list_"+str(tag)+".npz",igtrap,files,rad,mass)
+            f.write(str(icnt)+"\n")
+f.close()
