@@ -143,9 +143,6 @@ if __name__ == "__main__":
         print("Absolute Mode")
     else:
         sys.exit("No mode")
-    ###############
-
-    
 
     #median filter width
     medsmt_width = 50
@@ -173,23 +170,10 @@ if __name__ == "__main__":
 
     dt=1.0
     nt=len(tu[:,0])
-    #L
     nl=20
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
-
-    print(nl,nt,nsc,nw)
-    print("# of threads (W) = ",nw)
-    print("# of for-loop (L) = ",nl)
-    print("scoop number = ",nsc)
-    
-    
-    #    imgout=np.array(imgout,order="F").astype(np.float32)
-    #lc=np.copy(imgout)
-    #dev_ntrue = cuda.mem_alloc(ntrue.nbytes)
-    #cuda.memcpy_htod(dev_ntrue,ntrue)
-
     dev_tu = cuda.mem_alloc(tu.astype(np.float32).nbytes)
     cuda.memcpy_htod(dev_tu,tu.astype(np.float32))
 
@@ -200,26 +184,18 @@ if __name__ == "__main__":
     #output TLS s/n, w, l
     tlssn=np.zeros(nt*nq).astype(np.float32)
     dev_tlssn = cuda.mem_alloc(tlssn.nbytes)
-
     tlsw=np.zeros(nt*nq).astype(np.float32)
     dev_tlsw = cuda.mem_alloc(tlsw.nbytes)
-
     tlst0=np.zeros(nt*nq).astype(np.float32)
     dev_tlst0 = cuda.mem_alloc(tlst0.nbytes)
-
     tlsl=np.zeros(nt*nq).astype(np.float32)
     dev_tlsl = cuda.mem_alloc(tlsl.nbytes)
-
     tlshmax=np.zeros(nt*nq).astype(np.float32)
     dev_tlshmax = cuda.mem_alloc(tlshmax.nbytes)
 
     source_module=gtls.gtls_module()
     
-    ##compute kma,kmi,kkmi
     sharedsize=(2*nsc + nw + 2)*4 #byte
-    print("sharedsize=",sharedsize)
-    #gtls
-#    start = time.time()
     if args.m[0] == 2:
         source_module=gtls.gtls_module("absolute")
     else:
@@ -227,7 +203,6 @@ if __name__ == "__main__":
     pkernel=source_module.get_function("gtls")
 
     pkernel(dev_tlssn,dev_tlsw,dev_tlst0,dev_tlsl,dev_tlshmax,\
-            #dev_debugt,dev_debuglc,dev_debugpar,\
             dev_imgout,dev_tu,\
             np.int32(nt),\
             np.int32(nl),np.int32(nsc),\
@@ -256,15 +231,11 @@ if __name__ == "__main__":
         median=np.median(tlssn[iq::nq])
         #### PEAK STATISTICS ####
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
-        peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
-        
+        peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]                
         PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
-        print("Pick PEAK=",PickPeaks)
-        
         maxsn=tlssn[iq::nq][peak][0:PickPeaks]
         Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
         far=(maxsn-median)/std
-
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
 
@@ -352,17 +323,3 @@ if __name__ == "__main__":
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
     print (elapsed_time/(mide-mids), "[sec/N]")
-
-                            #                    except:
-#                        print("SOME ERROR for SAVE")
-                    ###############################################
-#                    if args.fig:
-#                        makefig.trapfig(tlst0[iq::nq],tlssn[iq::nq],tlsw[iq::nq],tu[im:ix,iq],tu0[iq],llc,peak,idetect,ttc,ttcn,llcn,offsetlc,ffac,H,W,L,T0,args.m[0],tic)
-            
-#        ff = open("mockslc_checkoutput."+str(medsmt_width)+".txt", 'a')
-#        ff.write(str(tic)+","+str(detection)+"\n")
-#        ff.close()
-#        print(tic)
-#            plt.savefig("KIC"+str(kic)+".pdf", bbox_inches="tight", pad_inches=0.0)
-#            plt.show()
-

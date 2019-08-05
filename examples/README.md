@@ -7,15 +7,30 @@ conda activate tf-gpu
 
 # TESS (SLC)
 
-## When updating the LCs
-
-- 0.1 generate data list 
-
-
-
-
 - gtls_slctess.py -- mock and pick by the TLS
 
+## When updating the LCs
+
+### generate data list 
+
+
+
+### generate training set for astronet
+
+- gtls_slctess.py -q (no injection)
+- gtls_slctess.py (injection)
+
+### testing settings
+
+- 
+
+### pick up pulses by TLS
+
+- gtls_slctess.py -p 
+
+### do NN for picked-up data
+
+-
 
 # Kepler STE
 
