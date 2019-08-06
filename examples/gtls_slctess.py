@@ -92,7 +92,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='GPU Mock/Pick TESS TLS')
     parser.add_argument('-r', help='Randomly selected CTLv8/TIC/', action='store_true')
     parser.add_argument('-i', nargs=1, help='mid start (master ID)', type=int)
-    parser.add_argument('-j', nargs=1, help='mid end slice (master ID)', type=int)
+    parser.add_argument('-j', nargs=1, help='mid end (master ID)', type=int)
 
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
@@ -156,13 +156,8 @@ if __name__ == "__main__":
         rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
         mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
     
-#    print("N=",len(dat["arr_0"]))
-    print(filelist)
-    elapsed_time = time.time() - start
-    print (("2 :{0}".format(elapsed_time)) + "[sec]")
-
-    sys.exit()
-
+#    elapsed_time = time.time() - start
+#    print (("2 :{0}".format(elapsed_time)) + "[sec]")
     
     nin=2000
     lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
