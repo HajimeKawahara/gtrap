@@ -25,7 +25,7 @@ if __name__ == "__main__":
     from time import sleep
     import pandas as pd
 #    import gtrap.genmock as gm
-#    import gtrap.picktrap as pt
+    import gtrap.picktrap as pt
     
     start = time.time()
 
@@ -40,7 +40,10 @@ if __name__ == "__main__":
     parser.add_argument('-f', nargs=1, default=["fits"],help='filetype: fits (BKJD), hdf5 (relative Day)', type=str)
     parser.add_argument('-m', nargs=1, default=[0],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
-    parser.add_argument('-n', nargs=1, default=[1],help='The target of the number of the transits: STE=1, DTE=2 for the max SN. ', type=int)
+    parser.add_argument('-n', nargs=1, default=[1],help='Number of picking peaks', type=int)
+    parser.add_argument('-c', nargs=1, help='T0 answer check if available', type=float)
+    parser.add_argument('-p', nargs=1, help='P answer check if available', type=float)
+
     #    parser.add_argument('-p', nargs=1, default=[400],help='Minimum interval for DTE (d)', type=float)
     parser.add_argument('-fig', help='save figure', action='store_true')
 
@@ -49,9 +52,14 @@ if __name__ == "__main__":
             
     # #
     args = parser.parse_args()
+    if args.fig:
+        pngcheck=True
+    else:
+        pngcheck=False
 
-    #### SLEEP TIME #######
-
+    if args.c:
+        T0ans=args.c[0]
+        Pans=args.p[0]
 
     sqltag=args.q[0]
     blsdb=args.d[0]
@@ -159,6 +167,12 @@ if __name__ == "__main__":
     ##OFFSET
     
     ############# NO INJECTION #################
+    ############# INJECTION #################
+    planet_data=pd.read_csv("data/kepler_berger.csv")
+    mask=planet_data["kepid"]==kicint
+    rstar=planet_data["radiusnew"].values[mask]
+    mstar=planet_data["mass"].values[mask]
+
     #########################################
 
     
@@ -179,7 +193,8 @@ if __name__ == "__main__":
 
     ##detrend (directly use)
     nby=1000 ## of thread
-    dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=128,isw=0,osw=1) #detrend
+    print(lc)
+    dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=100,isw=0,osw=1) #detrend
     
     #set
     tu=np.array(tu,order="C").astype(np.float32)
@@ -192,10 +207,10 @@ if __name__ == "__main__":
 
     #tbls setting
     #the number of the window width= # of the threads should be 2^n !!!!
-    nw=128 
+    nw=1024
     
     # Max and Min of Widths
-    wmin = 1.0  #  day
+    wmin = 0.5  #  day
     wmax = 6.0  # day
     dw=(wmax-wmin)/(nw-1)
     t0min=(2*wmin) #test
@@ -278,9 +293,12 @@ if __name__ == "__main__":
     ccdp15=np.array(dat["arr_0"][:,1])
 
     ########################
-    PeakMaxindex=args.n[0]-1
+    PickPeaks=args.n[0]
     
-
+    if args.c:
+        detection = 0
+        T0det = 0
+        
     for iq,kic in enumerate(kicintlist):
 
         ind=np.searchsorted(kicintar,kic)
@@ -296,59 +314,25 @@ if __name__ == "__main__":
         #### PEAK STATISTICS ####
         peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
         peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]        
-        ntop = 4 # the nuber of the top peaks
+
+        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
         
-        if len(peak) > ntop:
-
-        ### OLD ###
-#            stdc=np.nanstd(tlssn[iq::nq][peak[ntop:]]) #peak std
-#            medc=np.nanmedian(tlssn[iq::nq][peak[ntop:]])
-#            pssn=(tlssn[iq::nq][peak[0]]-medc)/stdc
-
-            i = np.argmax(tlssn[iq::nq])
-            ind=np.searchsorted(kicintccdp,kic)
-            ccdpval=ccdp15[ind]*1.e-6
-            pssn = tlshmax[iq::nq][i]/ccdpval
-            
-        else:
-            pssn = np.inf
-
-#===========CRIT 1==========================       
-        if len(peak) > ntop:
-            peak=peak[0:ntop]
-            peakval = tlssn[iq::nq][peak]
-            print(peakval)
-            ## dntop-1-th peak/std
-            diff=(peakval[-1]-median)/std
-        else:
-            ntop=len(peak)            
-            diff = 0.0
-#===========================================
-        
-        maxsn=tlssn[iq::nq][peak][PeakMaxindex]
+        maxsn=tlssn[iq::nq][peak][0:PickPeaks]
         Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
         far=(maxsn-median)/std
 
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
-#        if maxsn > 1.8:
-#            xxcrit=10.5*np.log10(maxsn-1.8)**0.6-3.5
-#            #xxcrit=10.5*np.log10(maxsn-1.8)**0.6-1.5
-#            xxcrit=10.5*np.log10(maxsn-1.8)**0.6-0.9 #DTE
-#        else:
-#            xxcrit=0.0
-
-        if True:
+        for ipick in range(0,PickPeaks):
 #        if (diff < xxcrit and diff < 8.0 and float(lent) > minlen and Pinterval > 300.0) or args.n[0]==1:
-            i = np.argmax(tlssn[iq::nq])
+            i = peak[ipick]
             im=np.max([0,int(i-nsc*ffac)])
             ix=np.min([nt,int(i+nsc*ffac)])
             imn=np.max([0,int(i-nsc/2)])
             ixn=np.min([nt,int(i+nsc/2)])
 
 
-            if args.m[0] == 0:    
+            if args.m[0] == 0 and ipick==0:    
                 llc=2.0 - lc[im:ix,iq]
                 llcn=2.0 - lc[imn:ixn,iq]
 
@@ -360,66 +344,54 @@ if __name__ == "__main__":
             ttcn=tu[imn:ixn,iq]#narrow region
 
             #PEAK VALUE
-            T0p=tlst0[iq::nq][peak][0]+tu0[iq]
-            Wp=tlsw[iq::nq][peak][0]
-            Lp=tlsl[iq::nq][peak][0]
-            Hp=tlshmax[iq::nq][peak][0]
+            T0=tlst0[iq::nq][peak[ipick]]+tu0[iq]
+            W=tlsw[iq::nq][peak[ipick]]
+            L=tlsl[iq::nq][peak[ipick]]
+            H=tlshmax[iq::nq][peak[ipick]]
 
             #################
+            print("===================")
             print("GPU ROUGH: T0,W,L,H")
-            print(T0p,Wp,Lp,Hp)
-            ### RE (PRECISE) FIT
-            NT0=10
-            dT0=0.1
-            tl=np.linspace(T0p-dT0,T0p+dT0,NT0)
-            NW=10
-            dW=Wp/100
-            Wl=np.linspace(Wp-dW,Wp+dW,NW)
-            NL=20
-            Lpd=0.0
-            Lpu=Wp/2.0
-            Ll=np.linspace(Lpd,Lpu,NL)
-            detpre,H,W,L,T0,offsetlc=tls.tlsfit(t,det,Wl,Ll,tl)
-            H=-H
-            print("PRECISE TRAFIT: T0,W,L,H")
             print(T0,W,L,H)
-            print("INJECT ONE ")
-            print(t0+tu0[0])
+            xmask=(t-T0>=-W/2)*(t-T0<=W/2)
+            offsetlc=np.nanmean(det[xmask])
 
-            dTpre=np.abs((np.mod(T0,Porb) - np.mod(t0+tu0[0],Porb))/(W/2))
-            print("DIFF/dur=",dTpre)
-            
-            ###############################################
-            ##  SUCCEED TO DETECT !!
-            if dTpre < 0.25: 
-                lab = 1
+            #check answer
+            if args.c:
+
+                dTpre=np.abs((np.mod(T0,Pans) - np.mod(T0ans,Pans))/(W/2))
+                if dTpre < 0.1 and detection == 0:
+                    detection = ipick+1
+                    T0det = T0
+                    print("Detected ipick=",ipick+1)
+                condition = (dTpre < 0.1 and detection == ipick+1)
             else:
-                lab = 0
-            
-            if True:
-#            if dTpre < 0.25: 
+                condition = True
+                    
+            if condition:
                 if args.o:
                     ttag=args.o[0].replace(".pick.txt","")
                 else:
                     ttag="_"                
                                 
-                ff = open("steinfo_pick"+ttag+str(lab)+".txt", 'a')
+                ff = open("steinfo_pick"+ttag+".txt", 'a')
                 ff.write(str(kic)+","+str(H)+","+str(tlst0[iq::nq][i]+tu0[iq])+","+str(L)+","+str(W)+",\n")
                 ff.close()
 
                 T0tilde=tlst0[iq::nq][i]#+tu0[iq]
                 ## REINVERSE
                 if args.m[0] == 0:
-                    lc = 2.0 - lc
-                
-                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=1,nx=201,check=True,tag="KIC"+str(kicint)+"s"+str(lab),savedir="picklc")
-                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc,tu,T0tilde,W,alpha=5,nx=2001,check=True,tag="KIC"+str(kicint)+"w"+str(lab),savedir="picklc")
+                    lcxx = 2.0 - lc
+
+                lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lcxx,tu,T0tilde,W,alpha=1,nx=201,check=pngcheck,tag="KIC"+str(kicint)+"_s"+str(ipick),savedir="picklc/png")
+                lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lcxx,tu,T0tilde,W,alpha=5,nx=2001,check=pngcheck,tag="KIC"+str(kicint)+"_w"+str(ipick),savedir="picklc/png")
                 print(len(lcs),len(lcsw))
 
                 starinfo=[mstar,rstar]                                   
+                genericinfo=np.array([kicint,T0,tlst0[iq::nq][i]+tu0[iq]])
 
-                np.savez("picklc/pick"+str(kicint),[lab],lcs,lcsw,starinfo)
-            
+                np.savez("picklc/pick"+str(kicint)+"_"+str(ipick),[-1],lcs,lcsw,starinfo,genericinfo)
+
             ###############################################
 
             
@@ -435,50 +407,61 @@ if __name__ == "__main__":
                 plt.ylabel("TLS series",fontsize=18)            
                 #            plt.title("KIC"+str(kic)+" SN="+str(round(maxsn,1))+" far="+str(round(far,1))+" dp="+str(round(diff,1)))
                 plt.title("KIC"+str(kic)+" (transit injected) Pi="+str(Pinterval),fontsize=18)
-                plt.axvline(t0+tu0,color="orange",ls="dotted")
+#                plt.axvline(t0+tu0,color="orange",ls="dotted")
 
                 ax=fig.add_subplot(3,1,2)
                 plt.tick_params(labelsize=18)
                 
                 plt.xlim(tlst0[iq::nq][i]-tlsw[iq::nq][i]*ffac+tu0[iq],tlst0[iq::nq][i]+tlsw[iq::nq][i]*ffac+tu0[iq])
-                ax.plot(tu[im:ix,iq]+tu0[iq],llc,".",color="gray")
+                try:
+                    ax.plot(tu[im:ix,iq]+tu0[iq],llc,".",color="gray")
+                    ##==================##
+                    
+                    mask=(ttc>0.0)
+                    dip=np.abs((np.max(llc[mask])-np.min(llc[mask]))/3.0)
+                    maskn=(ttcn>0.0)
                 
-                ##==================##
-                
-                mask=(ttc>0.0)
-                dip=np.abs((np.max(llc[mask])-np.min(llc[mask]))/3.0)
-                maskn=(ttcn>0.0)
-                
-                plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
-                plt.ylabel("PDCSAP",fontsize=18)
-                plt.axvline(t0,color="red")
+                    plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
+                    plt.ylabel("PDCSAP",fontsize=18)
+                except:
+                    print("IGNORE")
+
+                    
+#                plt.axvline(t0,color="red")
                 
                 ax=fig.add_subplot(3,1,3)
                 plt.tick_params(labelsize=18)
-                
-                pre=tls.gen_trapzoid(ttc[mask]+tu0[iq],H,W,L,T0)
-                if args.m[0] == 0:    
-                    pre = 1.0 - pre
-                elif args.m[0] == 1:    
-                    pre = 1.0 + pre
-                ax.plot(ttc[mask]+tu0[iq],pre-(1.0-offsetlc),color="green")
-                ax.plot(ttc[mask]+tu0[iq],pre-(1.0-offsetlc),".",color="green",alpha=0.3)
-
-                plt.xlim(tlst0[iq::nq][i]-tlsw[iq::nq][i]*ffac+tu0[iq],tlst0[iq::nq][i]+tlsw[iq::nq][i]*ffac+tu0[iq])
-                plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
-                plt.ylabel("best matched",fontsize=18)
-                if tu0[iq]==0.0:
-                    plt.xlabel("Day",fontsize=18)
-                else:
-                    plt.xlabel("BKJD",fontsize=18)
-
-                plt.axvline(t0,color="red")
+                try:
+                    pre=tls.gen_trapzoid(ttc[mask]+tu0[iq],H,W,L,T0)
+                    if args.m[0] == 0:    
+                        pre = 1.0 - pre
+                    elif args.m[0] == 1:    
+                        pre = 1.0 + pre
+                    ax.plot(ttc[mask]+tu0[iq],pre-(1.0-offsetlc),color="green")
+                    ax.plot(ttc[mask]+tu0[iq],pre-(1.0-offsetlc),".",color="green",alpha=0.3)
+                    
+                    plt.xlim(tlst0[iq::nq][i]-tlsw[iq::nq][i]*ffac+tu0[iq],tlst0[iq::nq][i]+tlsw[iq::nq][i]*ffac+tu0[iq])
+                    plt.ylim(np.min(llcn[maskn])-dip,np.max(llcn[maskn])+dip)
+                    plt.ylabel("best matched",fontsize=18)
+                    if tu0[iq]==0.0:
+                        plt.xlabel("Day",fontsize=18)
+                    else:
+                        plt.xlabel("BKJD",fontsize=18)
+                except:
+                    print("IGNORE")
+#                plt.axvline(t0,color="red")
                     
                 plt.savefig("KIC"+str(kic)+".pick.png")
                 print("t0=",tlst0[iq::nq][i]+tu0[iq])
                 print("height=",H)
                 print("L=",L)
 
+
+    if args.c:
+        ff = open("kelp_checkoutput.100v4.txt", 'a')
+        ff.write(str(kic)+","+str(detection)+","+str(T0det)+"\n")
+        ff.close()
+        
 
 
 #            plt.savefig("KIC"+str(kic)+".pdf", bbox_inches="tight", pad_inches=0.0)

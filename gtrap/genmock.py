@@ -34,3 +34,10 @@ def gentransit(t,t0=0.0,Porb=600.0,Rp=1.0,Mp=1.0,Rs=1.0,Ms=1.0,ideg=90.0,w=90.0,
     return injlc, b
 
     
+def gensin(t,Porb,t0,amp):
+    injsin = amp*np.sin(2*np.pi*(t-t0)/Porb)
+    return injsin
+
+def gendcos(t,Porb,t0,amp):
+    injcos = -amp*np.cos(4*np.pi*(t-t0)/Porb)
+    return injcos

@@ -7,6 +7,9 @@ setenv CPLUS_INCLUDE_PATH /install_directory/gtrap/include
 setenv PYTHONPATH /install_directory/gtrap
 ```
 
+pip install mysql-connector-python-rf
+
+
 # examples
 
 - gtls_kepler: GPU Trapezoid Least Square (GTLS) for the Kepler data. Used in [Kawahara and Masuda (2019)](http://arxiv.org/abs/1904.04980)

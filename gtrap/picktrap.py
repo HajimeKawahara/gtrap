@@ -7,7 +7,7 @@ from astropy.io import fits
 import gtrap.read_keplerlc as kep
 import pandas as pd
 from scipy import signal 
-import os
+import os, sys
 from scipy import interpolate
 
 def getkicdir(kicnum,ddir="/sharksuck/kic/data/"):
@@ -24,291 +24,47 @@ def getkicdir(kicnum,ddir="/sharksuck/kic/data/"):
     return ddir+rawdir
 
 
-def pick_cleaned_lc(kicdir,T0,wid=128,contcrit=84,check=False,lcout=False,tag="",savedir="./"):
-    lc,tu,n,ntrue,nq,inval,bjdoffset,t0, t,det=kep.load_keplc([kicdir],offt="0")
-    mask=(tu>0.0)
-    tuu=tu[mask]
-    i=np.searchsorted(tuu,T0)
-    numar=np.array(range(0,len(tu)))
-    ii=numar[tuu[i]==tu[:,0]][0]
-
-    istart=ii-wid
-    iend=ii+wid
-    tus=np.copy(tu[istart:iend,0])
-    lcs=np.copy(lc[istart:iend,0])
-
-    #pre classifier (check continuous null region)
-    prec = True 
-    if len(tus) == 0:
-        prec=False
-    elif tus[0] < 0.0 or tus[-1]<-1:
-        contsw=0
-        for j, teach in enumerate(tus):
-            if teach < 0.0:
-                contsw=contsw+1
-                if contsw > contcrit:
-                    prec=False
-            else:
-                contsw=0
-        
-    
-    #### CLEAN LCS UP ####
-    sw=0
-    
-    while sw==0:
-        tusplus=np.concatenate([[-2000],tus[:-1]])
-        tusminus=np.concatenate([tus[1:],[-2000]])
-        lcsplus=np.concatenate([[0],lcs[:-1]])
-        lcsminus=np.concatenate([lcs[1:],[0]])
-        medv=np.median(lcs)
-
-        for j, teach in enumerate(tus):
-            if teach < 0.0:
-                if tusminus[j] > 0.0 and tusplus[j] > 0.0:
-#                    lcs[j] = (lcsminus[j])
-                    lcs[j] = (lcsminus[j] + lcsplus[j])/2.0
-                    tus[j]=1000.0
-
-                elif tusminus[j] > 0.0:
-                    lcs[j] = medv                    
-#                    lcs[j] = lcsminus[j]
-                    tus[j]=1000.0
-                elif tusplus[j] > 0.0:
-                    lcs[j] = medv                    
-#                    lcs[j] = lcsplus[j]
-                    tus[j]=1000.0
-
-        if len(tus[tus<0.0])==0:
-            sw = 1
-    ### median filter
-    lcs=signal.medfilt(lcs,kernel_size=3)
-
-    ### NORMALIZE
-    lcs=(lcs-np.mean(lcs))/np.std(lcs)
-    
-    if check:
-        fig=plt.figure()
-        ax=fig.add_subplot(211)
-        istartx=np.max([0,istart-wid])
-        iendx=np.min([len(lc),iend+wid])
-        lctmp=lc[istartx:iendx]
-        tutmp=tu[istartx:iendx]
-        mask=(tutmp>0.0)
-        ax.plot(tutmp[mask],lctmp[mask],".",color="gray",label="before clean")
-
-        plt.legend()
-        ax=fig.add_subplot(212)
-        ax.plot(lcs,".",color="orange",label="cleaned vector")
-        plt.legend()
-        plt.savefig(os.path.join(savedir,tag+"vector.png"))
-        #        plt.show()
-        
-    if lcout:
-        return lcs, tus, lc[istart:iend,0], tu[istart:iend,0], lc[:,0], tu[:,0], prec
-    else:
-        return lcs, tus, prec
-
-
-def pick_Wnormalized_cleaned_lc(kicdir,T0,W,alpha=2,nx=128,daytopix=48,contcrit=84,check=False,lcout=False,tag="",savedir="./"):
-    #nx=64 length of WNC vector
-    lc,tu,n,ntrue,nq,inval,bjdoffset,t0, t,det=kep.load_keplc([kicdir],offt="0")
-    mask=(tu>0.0)
-    tuu=tu[mask]
-    i=np.searchsorted(tuu,T0)
-    numar=np.array(range(0,len(tu)))
-    ii=numar[tuu[i]==tu[:,0]][0]
-
-
-    wid=int(alpha*W*daytopix)
-    print("The range is between -",alpha," W to +",alpha," W." )
-    istart=max(0,ii-wid)
-    iend=min(ii+wid,len(tu))
-    tus=np.copy(tu[istart:iend,0])
-    lcs=np.copy(lc[istart:iend,0])
-    
-    #pre classifier (check continuous null region)
-    prec = True 
-    if len(tus) == 0:
-        prec=False
-    elif tus[0] < 0.0 or tus[-1]<-1:
-        contsw=0
-        for j, teach in enumerate(tus):
-            if teach < 0.0:
-                contsw=contsw+1
-                if contsw > contcrit:
-                    prec=False
-            else:
-                contsw=0
-        
-    
-    #### CLEAN LCS UP ####
-    sw=0
-    
-    while sw==0:
-        tusplus=np.concatenate([[-2000],tus[:-1]])
-        tusminus=np.concatenate([tus[1:],[-2000]])
-        lcsplus=np.concatenate([[0],lcs[:-1]])
-        lcsminus=np.concatenate([lcs[1:],[0]])
-        medv=np.median(lcs)
-
-        for j, teach in enumerate(tus):
-            if teach < 0.0:
-                if tusminus[j] > 0.0 and tusplus[j] > 0.0:
-#                    lcs[j] = (lcsminus[j])
-                    lcs[j] = (lcsminus[j] + lcsplus[j])/2.0
-                    tus[j]=1000.0
-
-                elif tusminus[j] > 0.0:
-                    lcs[j] = medv                    
-#                    lcs[j] = lcsminus[j]
-                    tus[j]=1000.0
-                elif tusplus[j] > 0.0:
-                    lcs[j] = medv                    
-#                    lcs[j] = lcsplus[j]
-                    tus[j]=1000.0
-
-        if len(tus[tus<0.0])==0:
-            sw = 1
-    ### median filter
-    lcs=signal.medfilt(lcs,kernel_size=3)
-
-    ### NORMALIZE
-    lcs=(lcs-np.mean(lcs))/np.std(lcs)
-    nlcs=len(lcs)
-    tt=np.array(range(0,nlcs))*2.0*alpha/nlcs - alpha
-    fx = interpolate.interp1d(tt, lcs)
-    tx=np.array(range(0,nx))*2.0*alpha/nx - alpha
-    lcsx=fx(tx)
-    
-    if check:
-        fig=plt.figure()
-        ax=fig.add_subplot(211)
-        istartx=np.max([0,istart-wid])
-        iendx=np.min([len(lc),iend+wid])
-        lctmp=lc[istartx:iendx]
-        tutmp=tu[istartx:iendx]
-        mask=(tutmp>0.0)
-        ax.plot(tutmp[mask],lctmp[mask],".",color="gray",label="before clean")
-
-        plt.legend()
-        ax=fig.add_subplot(212)
-        ax.plot(tt,lcs,".",color="orange")
-        ax.plot(tx,lcsx,".",color="red")
-
-        plt.xlabel("time (W)")
-        plt.ylabel("WNC vector")
-        plt.savefig(os.path.join(savedir,tag+"vector_w.png"))
-        #        plt.show()
-        
-    if lcout:
-        return lcs, tus, lc[istart:iend,0], tu[istart:iend,0], lc[:,0], tu[:,0], prec
-    else:
-        return lcsx, tx, prec
-
-
-def pick_cleaned_lc_direct(lc,tu,T0,wid=128,contcrit=84,check=False,lcout=False,tag="",savedir="./"):
-#    lc,tu,n,ntrue,nq,inval,bjdoffset,t0, t,det=kep.load_keplc([kicdir],offt="0")
-    mask=(tu>0.0)
-    tuu=tu[mask]
-    i=np.searchsorted(tuu,T0)
-    numar=np.array(range(0,len(tu)))
-    ii=numar[tuu[i]==tu[:,0]][0]
-
-    istart=ii-wid
-    iend=ii+wid+1
-    tus=np.copy(tu[istart:iend,0])
-    lcs=np.copy(lc[istart:iend,0])
-
-    #pre classifier (check continuous null region)
-    prec = True 
-    if len(tus) == 0:
-        prec=False
-    elif tus[0] < 0.0 or tus[-1]<-1:
-        contsw=0
-        for j, teach in enumerate(tus):
-            if teach < 0.0:
-                contsw=contsw+1
-                if contsw > contcrit:
-                    prec=False
-            else:
-                contsw=0
-        
-    
-    #### CLEAN LCS UP ####
-    sw=0
-    
-    while sw==0:
-        tusplus=np.concatenate([[-2000],tus[:-1]])
-        tusminus=np.concatenate([tus[1:],[-2000]])
-        lcsplus=np.concatenate([[0],lcs[:-1]])
-        lcsminus=np.concatenate([lcs[1:],[0]])
-        medv=np.median(lcs)
-
-        for j, teach in enumerate(tus):
-            if teach < 0.0:
-                if tusminus[j] > 0.0 and tusplus[j] > 0.0:
-#                    lcs[j] = (lcsminus[j])
-                    lcs[j] = (lcsminus[j] + lcsplus[j])/2.0
-                    tus[j]=1000.0
-
-                elif tusminus[j] > 0.0:
-                    lcs[j] = medv                    
-#                    lcs[j] = lcsminus[j]
-                    tus[j]=1000.0
-                elif tusplus[j] > 0.0:
-                    lcs[j] = medv                    
-#                    lcs[j] = lcsplus[j]
-                    tus[j]=1000.0
-
-        if len(tus[tus<0.0])==0:
-            sw = 1
-    ### median filter
-    lcs=signal.medfilt(lcs,kernel_size=3)
-
-    ### NORMALIZE
-    lcs=(lcs-np.mean(lcs))/np.std(lcs)
-    
-    if check:
-        fig=plt.figure()
-        ax=fig.add_subplot(211)
-        istartx=np.max([0,istart-wid])
-        iendx=np.min([len(lc),iend+wid])
-        lctmp=lc[istartx:iendx]
-        tutmp=tu[istartx:iendx]
-        mask=(tutmp>0.0)
-        ax.plot(tutmp[mask],lctmp[mask],".",color="gray",label="before clean")
-
-        plt.legend()
-        ax=fig.add_subplot(212)
-        ax.plot(lcs,".",color="orange",label="cleaned vector")
-        plt.legend()
-        plt.savefig(os.path.join(savedir,tag+"vector.png"))
-        #        plt.show()
-        
-    if lcout:
-        return lcs, tus, lc[istart:iend,0], tu[istart:iend,0], lc[:,0], tu[:,0], prec
-    else:
-        return lcs, tus, prec
-
-
 def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,contcrit=84,check=False,lcout=False,tag="",savedir="./"):
     #nx=64 length of WNC vector
     #lc,tu,n,ntrue,nq,inval,bjdoffset,t0, t,det=kep.load_keplc([kicdir],offt="0")
     mask=(tu>0.0)
     tuu=tu[mask]
     i=np.searchsorted(tuu,T0)
+
     numar=np.array(range(0,len(tu)))
-    ii=numar[tuu[i]==tu[:,0]][0]
+    ii=numar[tuu[i]==tu][0]
 
     wid=int(alpha*W*daytopix)
     print("W=",W,"d")
     print("The range is between -",alpha," W to +",alpha," W." )
-    istart=ii-int(1.11*alpha*wid)
-    iend=ii+int(1.11*alpha*wid)
-    tus=np.copy(tu[istart:iend,0])
-    lcs=np.copy(lc[istart:iend,0])
-
+    iss=ii-int(1.11*alpha*wid)
+    iee=ii+int(1.11*alpha*wid)
+    nget=iee-iss
+    if iss<0:        
+        istart=0
+        isp=-iss
+    else:
+        istart=iss
+        isp=0
+    if iee>len(tu):
+        iend=len(tu)
+    else:
+        iend=iee
+    iep = iend-istart+isp
+        
+    iend=min(iend,len(tu))
+    tus=np.ones(nget)*1000 #fill positive
+    lcs=np.ones(nget)*np.nanmedian(lc[istart:iend])
+    try:
+        tus[isp:iep]=np.copy(tu[istart:iend])
+        lcs[isp:iep]=np.copy(lc[istart:iend])
+    except:
+        print("isp,iep,istart,iend,iss,iee,nget,len(tu)")
+        print(isp,iep,istart,iend,iss,iee,nget,len(tu))
+        sys.exit()
     #pre classifier (check continuous null region)
+
+    
     prec = True 
     if len(tus) == 0:
         prec=False
@@ -357,16 +113,36 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     ### NORMALIZE
     lcs=(lcs-np.mean(lcs))/np.std(lcs)
     nlcs=len(lcs)
-    alphad=alpha*1.1
+    alphad=alpha*1.5
     tt=np.array(range(0,nlcs))*2.0*alphad/nlcs - alphad
+
     fx = interpolate.interp1d(tt, lcs)
     tx=np.array(range(0,nx))*2.0*alpha/nx - alpha
-    print("RANGE...")
-    print(np.max(tt),np.min(tt))
-    print(np.max(tx),np.min(tx))
 
-    lcsx=fx(tx)
     
+    try:
+        lcsx=fx(tx)
+    except:
+        print("Interpolate Failed")
+        print("Consider to increase alphad in picktrap.py")
+        lcsx=np.ones(len(tx))
+        
+    #fig=plt.figure()
+    #ax=fig.add_subplot(211)
+    #ax.plot(tu,lc,".")
+    #ax.plot(tu[istart:iend,0],lc[istart:iend,0],".",color="red")
+    #plt.axvline(T0)
+    #plt.xlim(0,np.max(tu))
+    #ax=fig.add_subplot(212)
+    #ax.plot(tt,lcs,".",color="red")
+    #for i in tx:
+    #    plt.axvline(i,alpha=0.2)
+    #plt.savefig("../examples/test.png")
+    #print(tus)
+    #print(lcs)
+#    sys.exit()
+
+        
     if check:
         fig=plt.figure()
         ax=fig.add_subplot(211)
@@ -384,11 +160,12 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
 
         plt.xlabel("time (W)")
         plt.ylabel("WNC vector")
+        #plt.savefig("../examples/test2.png")
         plt.savefig(os.path.join(savedir,tag+".png"))
         #        plt.show()
         
     if lcout:
-        return lcs, tus, lc[istart:iend,0], tu[istart:iend,0], lc[:,0], tu[:,0], prec
+        return lcs, tus, lc[istart:iend], tu[istart:iend], lc, tu, prec
     else:
         return lcsx, tx, prec
 
@@ -427,7 +204,6 @@ if __name__ == "__main__":
             nidarr=np.asarray(range(0,len(dat)))[args.nn[0]:args.nn[1]]
 
 
-    print(nidarr)
     for ii,nid in enumerate(nidarr):
         
         if args.f:        
