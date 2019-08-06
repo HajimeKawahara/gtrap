@@ -90,7 +90,7 @@ if __name__ == "__main__":
     start = time.time()
 
     parser = argparse.ArgumentParser(description='GPU Mock/Pick TESS TLS')
-    parser.add_argument('-r', help='Randomly selected CTLv3/TIC/', action='store_true')
+    parser.add_argument('-r', help='Randomly selected CTLv8/TIC/', action='store_true')
     parser.add_argument('-i', nargs=1, help='mid start (master ID)', type=int)
     parser.add_argument('-j', nargs=1, help='mid end slice (master ID)', type=int)
 
@@ -103,6 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')    
+
     
     ### SETTING
     mpdin = 48 #1 d for peak search margin
@@ -110,20 +111,24 @@ if __name__ == "__main__":
             
     args = parser.parse_args()
     midsx=args.i[0]
-    midex=args.j[0]
+    midex=args.j[0]+1
 #    pickonly = False
     pickonly = args.p
 
     ###get filename from the list
     igname="../data/ctl.list/igtrap.list"
-    datc=np.load(igname)
-    taglist=datc["arr_0"]
-    tagnum=datc["arr_1"]
+    datc=pd.read_csv(igname,names=("tag","i","j"))
+    
+    taglist=datc["tag"]
+    tagnum=datc["i"].values
+
     itag=np.searchsorted(tagnum,midsx)
     itage=np.searchsorted(tagnum,midex)
 
+
     if itag==itage:    
-        tag=tagnum[itag]        
+        tag=taglist[itag-1]
+        print("tag",tag,midsx,midex)
         listname="../data/ctl.list/ctl.list_"+tag+".npz"
         dat=np.load(listname)
         igtrap=dat["arr_0"]
@@ -151,8 +156,11 @@ if __name__ == "__main__":
         rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
         mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
     
-    print("N=",len(dat["arr_0"]))
+#    print("N=",len(dat["arr_0"]))
     print(filelist)
+    elapsed_time = time.time() - start
+    print (("2 :{0}".format(elapsed_time)) + "[sec]")
+
     sys.exit()
 
     
