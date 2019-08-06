@@ -49,8 +49,10 @@ Generating LCs with mock transit (for training).
 
 ## picktrap
 
-
 ## gnet
 
 CNN classifier using Keras.
 
+#external modules used in gtrap
+
+- gpytorch: for the fast GP
