@@ -93,7 +93,6 @@ if __name__ == "__main__":
     parser.add_argument('-r', help='Randomly selected CTLv8/TIC/', action='store_true')
     parser.add_argument('-i', nargs=1, help='mid start (master ID)', type=int)
     parser.add_argument('-j', nargs=1, help='mid end (master ID)', type=int)
-
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
