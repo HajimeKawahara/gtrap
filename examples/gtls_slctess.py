@@ -115,7 +115,7 @@ if __name__ == "__main__":
     pickonly = args.p
 
     ###get filename from the list
-    igname="../data/ctl.list/igtrap.list"
+    igname="/home/kawahara/gtrap/data/ctl.list/igtrap.list"
     datc=pd.read_csv(igname,names=("tag","i","j"))
     
     taglist=datc["tag"]
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     if itag==itage:    
         tag=taglist[itag-1]
         print("tag",tag,midsx,midex)
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
+        listname="/home/kawahara/gtrap/data/ctl.list/ctl.list_"+tag+".npz"
         dat=np.load(listname)
         igtrap=dat["arr_0"]
         mids=np.searchsorted(igtrap,midsx)
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     else:
         tag=taglist[itag-1]        
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
+        listname="/home/kawahara/gtrap/data/ctl.list/ctl.list_"+tag+".npz"
         dat=np.load(listname)
         igtrap=dat["arr_0"]
         mids=np.searchsorted(igtrap,midsx)
@@ -149,7 +149,7 @@ if __name__ == "__main__":
         mstar=dat["arr_3"][mids:] #stellar mass        
 
         tag=taglist[itage-1]
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
+        listname="/home/kawahara/gtrap/data/ctl.list/ctl.list_"+tag+".npz"
         dat=np.load(listname)
         igtrap=dat["arr_0"]
         mide=np.searchsorted(igtrap,midex)

@@ -1,3 +1,8 @@
+#sh batch mode
+All sh is made by makesh.py in sh directory
+- execute sh/all_...sh ...
+
+
 
 # NN
 How to use astronet...
