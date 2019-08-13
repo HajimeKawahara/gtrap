@@ -102,13 +102,18 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')    
-    print("--")
+    parser.add_argument('-sd', nargs=1, help='output', type=str)
+
     
     ### SETTING
     mpdin = 48 #1 d for peak search margin
     np.random.seed(1)
-            
+    
     args = parser.parse_args()
+    if args.sd:
+        subd=args.sd[0]
+    else:
+        subd=""
     midsx=args.i[0]
     midex=args.j[0]+1
 #    pickonly = False
@@ -256,37 +261,34 @@ if __name__ == "__main__":
     ########################
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
-        detection=0
-        lab=0
-        fac=1.0
-        ffac = 8.0 #region#
+        print(iq,"/",len(ticarr))
+        try:
+            ticname=str(tic)
+            detection=0
+            lab=0
+            fac=1.0
+            ffac = 8.0 #region#
+            
+            mask = (tlssn[iq::nq]>0.0)        
+            std=np.std(tlssn[iq::nq][mask])
+            median=np.median(tlssn[iq::nq])
+            #### PEAK STATISTICS ####
+            peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
+            peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]                
+            PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
+            maxsn=tlssn[iq::nq][peak][0:PickPeaks]
+            far=(maxsn-median)/std
+            minlen =  10000.0 #minimum length for time series
+            lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
+            
 
-        mask = (tlssn[iq::nq]>0.0)        
-        std=np.std(tlssn[iq::nq][mask])
-        median=np.median(tlssn[iq::nq])
-        #### PEAK STATISTICS ####
-        peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
-        peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]                
-        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
-        maxsn=tlssn[iq::nq][peak][0:PickPeaks]
-        Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
-        far=(maxsn-median)/std
-        minlen =  10000.0 #minimum length for time series
-        lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
-
-        for ipick in range(0,PickPeaks):
-            print("##################"+str(ipick)+"##########################")
-
-            if True:
-
+            for ipick in range(0,PickPeaks):
                 i = peak[ipick]
                 im=np.max([0,int(i-nsc*ffac)])
                 ix=np.min([nt,int(i+nsc*ffac)])
                 imn=np.max([0,int(i-nsc/2)])
                 ixn=np.min([nt,int(i+nsc/2)])
-                
-            
+                            
                 if args.m[0] == 0:    
                     llc=2.0 - lc[im:ix,iq]
                     llcn=2.0 - lc[imn:ixn,iq]
@@ -305,19 +307,18 @@ if __name__ == "__main__":
                 H=tlshmax[iq::nq][peak[ipick]]
                 
                 #################
-                print("GPU ROUGH: T0,W,L,H")
-                print(T0,W,L,H)
+                #print("GPU ROUGH: T0,W,L,H")
+                #print(T0,W,L,H)
                 
                 if args.q or pickonly:
                     dTpre=0.0
                 else:
                     dTpre=np.abs((np.mod(T0,Porb[iq]) - np.mod(t0[iq]+tu0[iq],Porb[iq]))/(W/2))
-                print("DIFF/dur=",dTpre)
+                #print("DIFF/dur=",dTpre)
 
 #                if True:
                 if (dTpre < 0.1 and detection == 0) or args.q or pickonly:
-                    print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
-
+                    #print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
                     detection = ipick+1
                     if args.q:
                         lab=0
@@ -325,35 +326,37 @@ if __name__ == "__main__":
                         lab=-1
                     else:
                         lab=1
-                                   
-
+                    
+                    
                     T0tilde=tlst0[iq::nq][peak[ipick]]
                     ## REINVERSE
                     if args.m[0] == 0:
                         lc = 2.0 - lc
 
-                    if True:
-                        sector=sectorarr[iq]
-                        camera=cameraarr[iq]
-                        CCD=CCDarr[iq]
+                    sector=sectorarr[iq]
+                    camera=cameraarr[iq]
+                    CCD=CCDarr[iq]
 
-                        if pickonly:
-                            savpng="png"
-                            tag="TIC"+str(ticname)+"s"+str(lab)
-                        else:
-                            savpng="mocklc_slctess/png"
-                            tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
-                        ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
-                        #                    try:
-                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=args.fig,tag=tag,savedir=savpng)      
-                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=args.fig,tag=tag,savedir=savpng)
-                        #                print(len(lcs),len(lcsw))
-                        starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
-                        if pickonly:
-                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
-                        else:
-                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,starinfo)
-
+                    if pickonly:
+                        savpng="png"
+                        tag="TIC"+str(ticname)+"s"+str(lab)
+                    else:
+                        savpng="mocklc_slctess/png"
+                        tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
+                            
+                    ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
+                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=args.fig,tag=tag,savedir=savpng)      
+                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=args.fig,tag=tag,savedir=savpng)
+                    #                print(len(lcs),len(lcsw))
+                    starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
+                    if pickonly:
+                        savedd="/home/kawahara/gtrap/examples/picklcslc/"+subd
+                        os.makedirs(savedd, exist_ok=True)
+                        np.savez(os.path.join(savedd,"pick_slctess"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,starinfo)
+                    else:
+                        np.savez("/home/kawahara/gtrap/examples/mocklcslc/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,starinfo)
+        except:
+            print(iq,"/",len(ticarr),"Some Error in cleanning/")
 
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
