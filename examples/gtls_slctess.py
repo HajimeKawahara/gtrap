@@ -21,12 +21,8 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     Rs = rstar
 
     a = (((Porb*u.day)**2 * G * (Ms*M_sun + Mp*M_jup) / (4*np.pi**2))**(1./3)).to(R_sun).value/Rs     
-    #b=a*np.cos(ideg/180.0*np.pi)
     b=np.random.random()
     ideg=np.arccos(b/a)/np.pi*180.0
-    #print(ideg,"deg")
-    #ideg=ideg[0]
-
     
     tux=np.copy(tu)
     tux[tu<0.0]=None
@@ -93,7 +89,11 @@ if __name__ == "__main__":
     parser.add_argument('-r', help='Randomly selected CTLv8/TIC/', action='store_true')
     parser.add_argument('-i', nargs=1, help='mid start (master ID)', type=int)
     parser.add_argument('-j', nargs=1, help='mid end (master ID)', type=int)
+
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
+    parser.add_argument('-scc', nargs='+', help='sector_camera_chip, ex) 1_1_1 ', type=str)
+    # ex: python gtls_slctess.py -t 126786393 -scc 1_1_1 -n 2 -fig -q
+
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
     parser.add_argument('-n', nargs=1, default=[1],help='Number of picking peaks', type=int)
@@ -102,72 +102,106 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')    
-    print("--")
     
     ### SETTING
     mpdin = 48 #1 d for peak search margin
-    np.random.seed(1)
-            
+    np.random.seed(1)            
     args = parser.parse_args()
-    midsx=args.i[0]
-    midex=args.j[0]+1
-#    pickonly = False
     pickonly = args.p
 
-    ###get filename from the list
-    igname="../data/ctl.list/igtrap.list"
-    datc=pd.read_csv(igname,names=("tag","i","j"))
-    
-    taglist=datc["tag"]
-    tagnum=datc["i"].values
+    if args.i and args.j:
+        midsx=args.i[0]
+        midex=args.j[0]+1
+        #    pickonly = False
+        
+        ###get filename from the list
+        igname="../data/ctl.list/igtrap.list"
+        datc=pd.read_csv(igname,names=("tag","i","j"))
+        
+        taglist=datc["tag"]
+        tagnum=datc["i"].values
+        
+        itag=np.searchsorted(tagnum,midsx+1)
+        itage=np.searchsorted(tagnum,midex+1)
+        print(itag,itage)
+        
+        if itag==itage:    
+            tag=taglist[itag-1]
+            print("tag",tag,midsx,midex)
+            listname="../data/ctl.list/ctl.list_"+tag+".npz"
+            dat=np.load(listname)
+            igtrap=dat["arr_0"]
+            mids=np.searchsorted(igtrap,midsx)
+            mide=np.searchsorted(igtrap,midex)
+            filelist=dat["arr_1"][mids:mide]    
+            rstar=dat["arr_2"][mids:mide] #stellar radius
+            mstar=dat["arr_3"][mids:mide] #stellar mass
+            
+        else:
+            tag=taglist[itag-1]        
+            listname="../data/ctl.list/ctl.list_"+tag+".npz"
+            dat=np.load(listname)
+            igtrap=dat["arr_0"]
+            mids=np.searchsorted(igtrap,midsx)
+            filelist=dat["arr_1"][mids:]    
+            
+            rstar=dat["arr_2"][mids:] #stellar radius
+            mstar=dat["arr_3"][mids:] #stellar mass        
+            
+            tag=taglist[itage-1]
+            listname="../data/ctl.list/ctl.list_"+tag+".npz"
+            dat=np.load(listname)
+            igtrap=dat["arr_0"]
+            mide=np.searchsorted(igtrap,midex)
+            filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
+            rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
+            mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
+    elif args.t and args.scc:
+        from urllib.parse import urlparse
+        import mysql.connector
 
-    itag=np.searchsorted(tagnum,midsx+1)
-    itage=np.searchsorted(tagnum,midex+1)
-    print(itag,itage)
+        url = urlparse('mysql://fisher:atlantic@133.11.229.168:3306/TESS')
+        conn = mysql.connector.connect(
+            host = url.hostname or '133.11.229.168',
+            port = url.port or 3306,
+            user = url.username or 'fisher',
+            password = url.password or 'atlantic',
+            database = url.path[1:],
+        )
+        cur = conn.cursor()
 
-    if itag==itage:    
-        tag=taglist[itag-1]
-        print("tag",tag,midsx,midex)
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mids=np.searchsorted(igtrap,midsx)
-        mide=np.searchsorted(igtrap,midex)
-        filelist=dat["arr_1"][mids:mide]    
-        rstar=dat["arr_2"][mids:mide] #stellar radius
-        mstar=dat["arr_3"][mids:mide] #stellar mass
+        rstar=[]
+        mstar=[]
+        filelist=[]
+        for ii,tic in enumerate(args.t):
+            scc=args.scc[ii]
+            com='SELECT rad,mass FROM CTLchip'+scc+' where ID='+str(tic)
+            print(com)
+            if int(scc[0])<11:
+                filelist.append("/manta/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
+            else:
+                filelist.append("/stingray/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
+
+            cur.execute(com)
+            out=cur.fetchall()[0]
+            out=np.array(out) #rad, mass
+            rstar.append(out[0])
+            mstar.append(out[1])
+        rstar=np.array(rstar)
+        mstar=np.array(mstar)
 
     else:
-        tag=taglist[itag-1]        
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mids=np.searchsorted(igtrap,midsx)
-        filelist=dat["arr_1"][mids:]    
-
-        rstar=dat["arr_2"][mids:] #stellar radius
-        mstar=dat["arr_3"][mids:] #stellar mass        
-
-        tag=taglist[itage-1]
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mide=np.searchsorted(igtrap,midex)
-        filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
-        rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
-        mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
-
-
+        sys.exit("Specify -i&-j or -t&-scc")
 
     nin=2000
-    lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
 
+    
     if args.q or pickonly:
         print("NO INJECTION")
     else:
         lc,Porb,t0=injecttransit(lc,tu,nq,mstar,rstar)
         
-    
     ## for transit ##
     if args.m[0] == 0:
         lc = 2.0 - lc
@@ -274,7 +308,28 @@ if __name__ == "__main__":
         minlen =  10000.0 #minimum length for time series
         lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
 
+        if True:
+            fig=plt.figure()
+            ax=fig.add_subplot(211)
+            ax.plot(tu[iq::nq],asind[iq::nq],".")
+            ax.set_xlim(0,np.max(tu[iq::nq]))
+            plt.ylabel("asind (asteroid)")
 
+
+            ax=fig.add_subplot(212)
+            ax.plot(tu[iq::nq],lc[iq::nq],".")
+            plt.ylabel("lc")
+            plt.xlabel("time")
+            ax.set_ylim(0.98*np.median(lc[iq::nq]),1.02*np.median(lc[iq::nq]))
+            ax.set_xlim(0,np.max(tu[iq::nq]))
+            plt.savefig("info.png")
+
+#            fig=plt.figure()
+#            ax=fig.add_subplot(111)
+#            ax.plot(tlst0[iq::nq],tlssn[iq::nq],".")
+#            ax.plot(tlst0[iq::nq][mask],tlssn[iq::nq][mask],".")
+#            plt.savefig("TLS.png")
+        
         for ipick in range(0,PickPeaks):
             print("##################"+str(ipick)+"##########################")
 
@@ -345,16 +400,19 @@ if __name__ == "__main__":
                             tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
                         ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
                         #                    try:
-                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=args.fig,tag=tag,savedir=savpng)      
-                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=args.fig,tag=tag,savedir=savpng)
+                        print("TAG=",tag)
+                        lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_focus",savedir=savpng,T0lab=T0)      
+                        asindsw, tusw, ainfogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_asind",savedir=savpng,T0lab=T0)
+                        lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
+
                         #                print(len(lcs),len(lcsw))
                         starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                         if pickonly:
-                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
+                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,asindsw,infogap,infogapw,starinfo)
                         else:
-                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,starinfo)
+                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,asindsw,infogap,infogapw,starinfo)
 
 
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
-    print (elapsed_time/(midex-midsx), "[sec/N]")
+#    print (elapsed_time/(midex-midsx), "[sec/N]")

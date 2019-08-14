@@ -114,10 +114,10 @@ if __name__ == "__main__":
         ticn=str(tic[j])+"_"+str(sector[j])+"_"+str(camera[j])+"_"+str(CCD[j])
         try:
             hdf="/pike/pipeline/TIC3/tess_"+ticn+".h5"
-            time, flux, q, cno, ra, dec, tic1, sector1, camera1, CCD1=tesstic.read_tesstic(hdf)        
+            time, flux, q, cno, ra, dec, tic1, sector1, camera1, CCD1, cnts=tesstic.read_tesstic(hdf)        
         except:
             hdf="/pike/pipeline/step3/tess_"+ticn+".h5"
-            time, flux, q, cno, ra, dec, tic1, sector1, camera1, CCD1=tesstic.read_tesstic(hdf)        
+            time, flux, q, cno, ra, dec, tic1, sector1, camera1, CCD1, cnts=tesstic.read_tesstic(hdf)        
         #print(ticn)
         fig = plt.figure()
         ax = fig.add_subplot(211)
