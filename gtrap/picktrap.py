@@ -35,8 +35,8 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     ii=numar[tuu[i]==tu][0]
 
     wid=int(alpha*W*daytopix)
-    print("W=",W,"d")
-    print("The range is between -",alpha," W to +",alpha," W." )
+#    print("W=",W,"d")
+#    print("The range is between -",alpha," W to +",alpha," W." )
     iss=ii-int(1.11*alpha*wid)
     iee=ii+int(1.11*alpha*wid)
     nget=iee-iss
@@ -61,8 +61,8 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
         tus[isp:iep]=np.copy(tu[istart:iend])
         lcs[isp:iep]=np.copy(lc[istart:iend])
     except:
-        print("isp,iep,istart,iend,iss,iee,nget,len(tu)")
-        print(isp,iep,istart,iend,iss,iee,nget,len(tu))
+        #        print("isp,iep,istart,iend,iss,iee,nget,len(tu)")
+        #        print(isp,iep,istart,iend,iss,iee,nget,len(tu))
         sys.exit()
     #pre classifier (check continuous null region)
 
