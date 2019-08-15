@@ -1,8 +1,3 @@
-#sh batch mode
-All sh is made by makesh.py in sh directory
-- execute sh/all_...sh ...
-
-
 
 # NN
 How to use astronet...
@@ -12,33 +7,33 @@ conda activate tf-gpu
 
 # TESS (SLC)
 
-- gtls_slctess.py -- mock and pick by the TLS
-
-## When updating the LCs
-
-- 0.1 generate data list 
-
-data/python_updatelist/make_list_sector.py
-list are in data/ctl.list
-
-- 1. generate training datasets
-
 ```
+gtls_slctess.py -p (pick up)
 gtls_slctess.py -q (no injection)
 gtls_slctess.py (injection)
 ```
 
-### testing settings
 
-- 
+## When updating the LCs
 
-### pick up pulses by TLS
+- 0. Update the data list 
 
-- gtls_slctess.py -p 
+data/python_updatelist/make_list_sector.py
+list are in data/ctl.list
 
-### do NN for picked-up data
+- 1. Generate training/test datasets
 
--
+Use batch/makemocksh.py and examples/sh/*.sh
+
+
+- 2. Train the DNN
+
+
+- 3. Pick up the pulse candidates from all h5.
+
+Use batch/makepicksh.py.
+
+- 4. Do DNN!
 
 # Kepler STE
 

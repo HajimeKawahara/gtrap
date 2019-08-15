@@ -301,8 +301,8 @@ if __name__ == "__main__":
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
         print(iq,"/",len(ticarr))
-        if True:
-#        try:
+#        if True:
+        try:
             ticname=str(tic)
             detection=0
             lab=0
@@ -407,8 +407,8 @@ if __name__ == "__main__":
                     if detsw == 0:
                         idet=idet+1
                         detsw=0
-#        except:
-#            print(iq,"/",len(ticarr),"Some Error in cleanning/")
+        except:
+            print(iq,"/",len(ticarr),"Some Error in cleanning/")
 
     print("Detected:",idet,"/",len(ticarr))
 
