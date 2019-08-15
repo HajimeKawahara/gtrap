@@ -102,12 +102,17 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')    
-<<<<<<< HEAD
+    parser.add_argument('-sd', nargs=1, help='output', type=str)
     
     ### SETTING
     mpdin = 48 #1 d for peak search margin
     np.random.seed(1)            
     args = parser.parse_args()
+    if args.sd:
+        subd=args.sd[0]
+    else:
+        subd=""
+
     pickonly = args.p
 
     if args.i and args.j:
@@ -193,73 +198,9 @@ if __name__ == "__main__":
 
     else:
         sys.exit("Specify -i&-j or -t&-scc")
-=======
-    parser.add_argument('-sd', nargs=1, help='output', type=str)
-
-    
-    ### SETTING
-    mpdin = 48 #1 d for peak search margin
-    np.random.seed(1)
-    
-    args = parser.parse_args()
-    if args.sd:
-        subd=args.sd[0]
-    else:
-        subd=""
-    midsx=args.i[0]
-    midex=args.j[0]+1
-#    pickonly = False
-    pickonly = args.p
-
-    ###get filename from the list
-    igname="/home/kawahara/gtrap/data/ctl.list/igtrap.list"
-    datc=pd.read_csv(igname,names=("tag","i","j"))
-    
-    taglist=datc["tag"]
-    tagnum=datc["i"].values
-
-    itag=np.searchsorted(tagnum,midsx+1)
-    itage=np.searchsorted(tagnum,midex+1)
-    print(itag,itage)
-
-    if itag==itage:    
-        tag=taglist[itag-1]
-        print("tag",tag,midsx,midex)
-        listname="/home/kawahara/gtrap/data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mids=np.searchsorted(igtrap,midsx)
-        mide=np.searchsorted(igtrap,midex)
-        filelist=dat["arr_1"][mids:mide]    
-        rstar=dat["arr_2"][mids:mide] #stellar radius
-        mstar=dat["arr_3"][mids:mide] #stellar mass
-
-    else:
-        tag=taglist[itag-1]        
-        listname="/home/kawahara/gtrap/data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mids=np.searchsorted(igtrap,midsx)
-        filelist=dat["arr_1"][mids:]    
-
-        rstar=dat["arr_2"][mids:] #stellar radius
-        mstar=dat["arr_3"][mids:] #stellar mass        
-
-        tag=taglist[itage-1]
-        listname="/home/kawahara/gtrap/data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mide=np.searchsorted(igtrap,midex)
-        filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
-        rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
-        mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
-
-
->>>>>>> 8617bb7ed165673a95b83f1ec2a1541b7f0946e5
 
     nin=2000
     lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
-
     
     if args.q or pickonly:
         print("NO INJECTION")
@@ -354,53 +295,8 @@ if __name__ == "__main__":
     ########################
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
-<<<<<<< HEAD
-        detection=0
-        lab=0
-        fac=1.0
-        ffac = 8.0 #region#
-
-        mask = (tlssn[iq::nq]>0.0)        
-        std=np.std(tlssn[iq::nq][mask])
-        median=np.median(tlssn[iq::nq])
-        #### PEAK STATISTICS ####
-        peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
-        peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]                
-        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
-        maxsn=tlssn[iq::nq][peak][0:PickPeaks]
-        Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
-        far=(maxsn-median)/std
-        minlen =  10000.0 #minimum length for time series
-        lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
-        if True:
-            fig=plt.figure()
-            ax=fig.add_subplot(211)
-            ax.plot(tu[iq::nq],asind[iq::nq],".")
-            ax.set_xlim(0,np.max(tu[iq::nq]))
-            plt.ylabel("asind (asteroid)")
-
-
-            ax=fig.add_subplot(212)
-            ax.plot(tu[iq::nq],lc[iq::nq],".")
-            plt.ylabel("lc")
-            plt.xlabel("time")
-            ax.set_ylim(0.98*np.median(lc[iq::nq]),1.02*np.median(lc[iq::nq]))
-            ax.set_xlim(0,np.max(tu[iq::nq]))
-            plt.savefig("info.png")
-
-#            fig=plt.figure()
-#            ax=fig.add_subplot(111)
-#            ax.plot(tlst0[iq::nq],tlssn[iq::nq],".")
-#            ax.plot(tlst0[iq::nq][mask],tlssn[iq::nq][mask],".")
-#            plt.savefig("TLS.png")
-        
-        for ipick in range(0,PickPeaks):
-            print("##################"+str(ipick)+"##########################")
-
-            if True:
-=======
         print(iq,"/",len(ticarr))
+#        if True:
         try:
             ticname=str(tic)
             detection=0
@@ -419,8 +315,6 @@ if __name__ == "__main__":
             far=(maxsn-median)/std
             minlen =  10000.0 #minimum length for time series
             lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-            
->>>>>>> 8617bb7ed165673a95b83f1ec2a1541b7f0946e5
 
             for ipick in range(0,PickPeaks):
                 i = peak[ipick]
@@ -473,57 +367,32 @@ if __name__ == "__main__":
                     if args.m[0] == 0:
                         lc = 2.0 - lc
 
-<<<<<<< HEAD
-                    if True:
-                        sector=sectorarr[iq]
-                        camera=cameraarr[iq]
-                        CCD=CCDarr[iq]
-
-                        if pickonly:
-                            savpng="png"
-                            tag="TIC"+str(ticname)+"s"+str(lab)
-                        else:
-                            savpng="mocklc_slctess/png"
-                            tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
-                        ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
-                        #                    try:
-                        print("TAG=",tag)
-                        
-                        asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
-                        lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
-                        asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)
-                        lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
-
-                        #                print(len(lcs),len(lcsw))
-                        starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
-                        if pickonly:
-                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
-                        else:
-                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
-=======
                     sector=sectorarr[iq]
                     camera=cameraarr[iq]
                     CCD=CCDarr[iq]
->>>>>>> 8617bb7ed165673a95b83f1ec2a1541b7f0946e5
 
                     if pickonly:
                         savpng="png"
                         tag="TIC"+str(ticname)+"s"+str(lab)
                     else:
-                        savpng="mocklc_slctess/png"
+                        savpng="mocklcslc/png"
                         tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
-                            
+
+                        
                     ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
-                    lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=args.fig,tag=tag,savedir=savpng)      
-                    lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=args.fig,tag=tag,savedir=savpng)
-                    #                print(len(lcs),len(lcsw))
+
+                    asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
+                    lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
+                    asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)
+                    lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
+
                     starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                     if pickonly:
                         savedd="/home/kawahara/gtrap/examples/picklcslc/"+subd
                         os.makedirs(savedd, exist_ok=True)
-                        np.savez(os.path.join(savedd,"pick_slctess"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,starinfo)
+                        np.savez(os.path.join(savedd,"pick_slctess"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                     else:
-                        np.savez("/home/kawahara/gtrap/examples/mocklcslc/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,starinfo)
+                        np.savez("/home/kawahara/gtrap/examples/mocklcslc/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
         except:
             print(iq,"/",len(ticarr),"Some Error in cleanning/")
 
