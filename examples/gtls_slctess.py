@@ -201,6 +201,7 @@ if __name__ == "__main__":
 
     nin=2000
     lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    icnt=0
     
     if args.q or pickonly:
         print("NO INJECTION")
@@ -295,9 +296,10 @@ if __name__ == "__main__":
     ########################
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
+        icnt=icnt+1
         print(iq,"/",len(ticarr))
-#        if True:
-        try:
+        if True:
+#        try:
             ticname=str(tic)
             detection=0
             lab=0
@@ -372,29 +374,32 @@ if __name__ == "__main__":
                     CCD=CCDarr[iq]
 
                     if pickonly:
-                        savpng="png"
                         tag="TIC"+str(ticname)+"s"+str(lab)
+                        savedd="/home/kawahara/gtrap/examples/picklcslc/"+subd
+
                     else:
-                        savpng="mocklcslc/png"
-                        tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
+                        tag=str(icnt)+"_TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
+                        savedd="/home/kawahara/gtrap/examples/mocklcslc/"+subd
+
+                    savpng=os.path.join(savedd,"png")                       
+                    os.makedirs(savedd, exist_ok=True)
+                    os.makedirs(savpng, exist_ok=True)
 
                         
                     ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
 
                     asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
                     lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
-                    asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)
+                    asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_awide",savedir=savpng,T0lab=T0)
                     lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
 
                     starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                     if pickonly:
-                        savedd="/home/kawahara/gtrap/examples/picklcslc/"+subd
-                        os.makedirs(savedd, exist_ok=True)
                         np.savez(os.path.join(savedd,"pick_slctess"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                     else:
-                        np.savez("/home/kawahara/gtrap/examples/mocklcslc/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
-        except:
-            print(iq,"/",len(ticarr),"Some Error in cleanning/")
+                        np.savez(os.path.join(savedd,"mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+#        except:
+#            print(iq,"/",len(ticarr),"Some Error in cleanning/")
 
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
