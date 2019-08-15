@@ -10,7 +10,7 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     Porb = ((xPmax**(a1) - xPmin**(a1) )*Y + xPmin**(a1))**(1/a1)
 
     #Radius
-    xRpmin=0.2
+    xRpmin=1.0
     xRpmax=1.0    
     Y = np.random.random(nq)    
     Rp = Y*(xRpmax-xRpmin) + xRpmin
@@ -203,6 +203,7 @@ if __name__ == "__main__":
     nin=2000
     lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
     icnt=0
+    idet=0 #detected number
     
     if args.q or pickonly:
         print("NO INJECTION")
@@ -221,6 +222,7 @@ if __name__ == "__main__":
         sys.exit("No mode")
 
     #median filter width
+    #medsmt_width = 50
     medsmt_width = 50
     nby=1000 ## of thread
     dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=medsmt_width,isw=0,osw=1) #detrend
@@ -236,17 +238,18 @@ if __name__ == "__main__":
 
     #tbls setting
     #the number of the window width= # of the threads should be 2^n !!!!
-    nw=1024 
+    nw=1024 ### ? 
     
     # Max and Min of Widths
-    wmin = 0.2  #  day
+    wmin = 0.20  #  day
     wmax = 1.0  # day
     dw=(wmax-wmin)/(nw-1)
     t0min=(2*wmin) #test
-
+#    t0min=(0.*wmin) #test
+    
     dt=1.0
     nt=len(tu[:,0])
-    nl=20
+    nl=50
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
@@ -317,7 +320,7 @@ if __name__ == "__main__":
             far=(maxsn-median)/std
             minlen =  10000.0 #minimum length for time series
             lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
+            detsw=0
             for ipick in range(0,PickPeaks):
                 i = peak[ipick]
                 im=np.max([0,int(i-nsc*ffac)])
@@ -400,11 +403,14 @@ if __name__ == "__main__":
                         np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                     else:
                         np.savez(os.path.join(savnpz,str(icnt)+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
-                        icnt=icnt+1
-        
-
+                    icnt=icnt+1
+                    if detsw == 0:
+                        idet=idet+1
+                        detsw=0
 #        except:
 #            print(iq,"/",len(ticarr),"Some Error in cleanning/")
+
+    print("Detected:",idet,"/",len(ticarr))
 
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")

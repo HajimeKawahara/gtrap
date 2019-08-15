@@ -34,7 +34,7 @@ def make_mock_each_inject():
         f.write('s=$(($a * $i));'+"\n")
         f.write('e=$(($s + $a - 1));'+"\n")
         f.write('echo "$i $s $e";'+"\n")
-        f.write('python '+python_execute+' -i $s -j $e -fig -n 2 -sd "'+str(i)+'";'+"\n")
+        f.write('python '+python_execute+' -i $s -j $e -fig -n 1 -sd "'+str(i)+'";'+"\n")
         f.close()
 
 
@@ -56,5 +56,6 @@ def make_mock_each():
 
         
 if __name__ == "__main__":
-    make_mock_each()
-    make_mockall_sh()
+    make_mock_each_inject()
+#    make_mock_each()
+#    make_mockall_sh()
