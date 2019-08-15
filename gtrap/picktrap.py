@@ -154,6 +154,7 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
         ax=fig.add_subplot(312)
         ax.plot(tt,igap,".",color="orange")
         ax.plot(tx,igapx,".",color="red")
+        plt.ylabel("iGAP")
 
         ax=fig.add_subplot(313)
         ax.plot(tt,lcs,".",color="orange")

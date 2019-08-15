@@ -401,16 +401,18 @@ if __name__ == "__main__":
                         ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
                         #                    try:
                         print("TAG=",tag)
-                        lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_focus",savedir=savpng,T0lab=T0)      
-                        asindsw, tusw, ainfogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_asind",savedir=savpng,T0lab=T0)
+                        
+                        asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
+                        lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
+                        asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)
                         lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
 
                         #                print(len(lcs),len(lcsw))
                         starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                         if pickonly:
-                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,asindsw,infogap,infogapw,starinfo)
+                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                         else:
-                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,asindsw,infogap,infogapw,starinfo)
+                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
 
 
     elapsed_time = time.time() - start
