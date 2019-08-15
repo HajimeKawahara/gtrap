@@ -5,7 +5,7 @@ Neach = 1000 # num for each
 Nsh = 207 # num of eachshells
 # total light curves = Nbatch*Nsh
 
-python_execute="../gtls_slctess.py"
+python_execute="/home/kawahara/gtrap/examples/gtls_slctess.py"
 dirname="/home/kawahara/gtrap/examples/sh"
 allname="mockall_slc.sh"
 eachname="mockeach_slc"
@@ -22,7 +22,7 @@ def make_mockall_sh():
     f.write("done"+"\n")
     f.close()      
 
-def make_mock_each():
+def make_mock_each_inject():
     
     for i in range(1,Nsh+1):
         filename=eachname+str(i)+".sh"
@@ -34,18 +34,27 @@ def make_mock_each():
         f.write('s=$(($a * $i));'+"\n")
         f.write('e=$(($s + $a - 1));'+"\n")
         f.write('echo "$i $s $e";'+"\n")
-        f.write('python '+python_execute+' -i $s -j $e -fig -n 2;'+"\n")
+        f.write('python '+python_execute+' -i $s -j $e -fig -n 2 -sd "'+str(i)+'";'+"\n")
+        f.close()
 
+
+def make_mock_each():
+    
+    for i in range(1,Nsh+1):
+        filename=eachname+str(i)+".sh"
+        f=open(os.path.join(dirname,filename),"w")        
         #no injected samples
         exn = Neach*(i)+int(np.random.rand()*Neach)+1        
+        f.write('a='+str(Nbatch)+';'+"\n")
         f.write('j='+str(exn)+';'+"\n")
         f.write('l=$(($a * $j));'+"\n")
         f.write('k=$(($l + $a - 1));'+"\n")
         f.write('echo "$j $l $k";'+"\n")
-        f.write('python '+python_execute+' -i $l -j $k -fig -n 2 -q;'+"\n")
-
+        f.write('python '+python_execute+' -i $l -j $k -fig -n 2 -q -sd "'+str(i)+'";'+"\n")
         f.close()
-    
+
+
+        
 if __name__ == "__main__":
     make_mock_each()
     make_mockall_sh()

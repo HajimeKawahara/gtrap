@@ -105,6 +105,7 @@ if __name__ == "__main__":
     parser.add_argument('-sd', nargs=1, help='output', type=str)
     
     ### SETTING
+    ctldir="/home/kawahara/gtrap/data/ctl.list/"
     mpdin = 48 #1 d for peak search margin
     np.random.seed(1)            
     args = parser.parse_args()
@@ -121,7 +122,7 @@ if __name__ == "__main__":
         #    pickonly = False
         
         ###get filename from the list
-        igname="../data/ctl.list/igtrap.list"
+        igname=os.path.join(ctldir, "igtrap.list")
         datc=pd.read_csv(igname,names=("tag","i","j"))
         
         taglist=datc["tag"]
@@ -134,7 +135,7 @@ if __name__ == "__main__":
         if itag==itage:    
             tag=taglist[itag-1]
             print("tag",tag,midsx,midex)
-            listname="../data/ctl.list/ctl.list_"+tag+".npz"
+            listname=os.path.join(ctldir,"ctl.list_"+tag+".npz")
             dat=np.load(listname)
             igtrap=dat["arr_0"]
             mids=np.searchsorted(igtrap,midsx)
@@ -145,7 +146,7 @@ if __name__ == "__main__":
             
         else:
             tag=taglist[itag-1]        
-            listname="../data/ctl.list/ctl.list_"+tag+".npz"
+            listname=os.path.join(ctldir,"ctl.list_"+tag+".npz")
             dat=np.load(listname)
             igtrap=dat["arr_0"]
             mids=np.searchsorted(igtrap,midsx)
@@ -155,7 +156,7 @@ if __name__ == "__main__":
             mstar=dat["arr_3"][mids:] #stellar mass        
             
             tag=taglist[itage-1]
-            listname="../data/ctl.list/ctl.list_"+tag+".npz"
+            listname=os.path.join(ctldir,"ctl.list_"+tag+".npz")
             dat=np.load(listname)
             igtrap=dat["arr_0"]
             mide=np.searchsorted(igtrap,midex)
@@ -296,7 +297,6 @@ if __name__ == "__main__":
     ########################
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
-        icnt=icnt+1
         print(iq,"/",len(ticarr))
         if True:
 #        try:
@@ -382,7 +382,9 @@ if __name__ == "__main__":
                         savedd="/home/kawahara/gtrap/examples/mocklcslc/"+subd
 
                     savpng=os.path.join(savedd,"png")                       
-                    os.makedirs(savedd, exist_ok=True)
+                    savnpz=os.path.join(savedd,"npz")                       
+
+                    os.makedirs(savnpz, exist_ok=True)
                     os.makedirs(savpng, exist_ok=True)
 
                         
@@ -395,9 +397,12 @@ if __name__ == "__main__":
 
                     starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                     if pickonly:
-                        np.savez(os.path.join(savedd,"pick_slctess"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                     else:
-                        np.savez(os.path.join(savedd,"mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,str(icnt)+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        icnt=icnt+1
+        
+
 #        except:
 #            print(iq,"/",len(ticarr),"Some Error in cleanning/")
 
