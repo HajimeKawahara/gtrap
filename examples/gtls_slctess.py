@@ -10,7 +10,7 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     Porb = ((xPmax**(a1) - xPmin**(a1) )*Y + xPmin**(a1))**(1/a1)
 
     #Radius
-    xRpmin=1.0
+    xRpmin=0.2
     xRpmax=1.0    
     Y = np.random.random(nq)    
     Rp = Y*(xRpmax-xRpmin) + xRpmin
@@ -103,6 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')    
     parser.add_argument('-sd', nargs=1, help='output', type=str)
+    parser.add_argument('-cb', nargs=1, help='counter of multibatch', type=int)
     
     ### SETTING
     ctldir="/home/kawahara/gtrap/data/ctl.list/"
@@ -301,8 +302,8 @@ if __name__ == "__main__":
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
         print(iq,"/",len(ticarr))
-#        if True:
-        try:
+        if True:
+#        try:
             ticname=str(tic)
             detection=0
             lab=0
@@ -381,7 +382,11 @@ if __name__ == "__main__":
                         savedd="/home/kawahara/gtrap/examples/picklcslc/"+subd
 
                     else:
-                        tag=str(icnt)+"_TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
+                        if args.cb:
+                            counter=str(args.cb[0])+"_"+str(icnt)
+                        else:
+                            counter=str(icnt)
+                        tag=counter+"_TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
                         savedd="/home/kawahara/gtrap/examples/mocklcslc/"+subd
 
                     savpng=os.path.join(savedd,"png")                       
@@ -402,13 +407,13 @@ if __name__ == "__main__":
                     if pickonly:
                         np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                     else:
-                        np.savez(os.path.join(savnpz,str(icnt)+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,counter+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
                     icnt=icnt+1
                     if detsw == 0:
                         idet=idet+1
                         detsw=0
-        except:
-            print(iq,"/",len(ticarr),"Some Error in cleanning/")
+#        except:
+#            print(iq,"/",len(ticarr),"Some Error in cleanning/")
 
     print("Detected:",idet,"/",len(ticarr))
 

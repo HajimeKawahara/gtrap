@@ -164,9 +164,8 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
 
 
         #plt.savefig("../examples/test2.png")
-        plt.savefig(os.path.join(savedir,tag+".png"))
-        #        plt.show()
-        
+        pp=plt.savefig(os.path.join(savedir,tag+".png"))
+        plt.close()
     if lcout:
         return lcs, tus, lc[istart:iend], tu[istart:iend], lc, tu, prec
     else:

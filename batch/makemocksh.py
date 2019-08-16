@@ -26,7 +26,7 @@ def make_mockall_sh(igtrap,seq=True):
     f.write("done"+"\n")
     f.close()      
 
-def make_mock_each(Nbatch, igtrap, inject=False):
+def make_mock_each(Nbatch, igtrap, Nrep=1,inject=False):
     Nscc=len(igtrap)
     iarr=igtrap["i"].values
 #    jarr=igtrap["j"].values
@@ -34,16 +34,26 @@ def make_mock_each(Nbatch, igtrap, inject=False):
     for k in range(0,Nscc):
         filename=eachname+str(k)+".sh"
         f=open(os.path.join(dirname,filename),"w")        
-        i = iarr[k]
-        j = i + Nbatch - 1
-        f.write('i='+str(i)+';'+"\n")
-        f.write('j='+str(j)+';'+"\n")
+        ender=" & "
+        for l in range(0,Nrep):
+            i = iarr[k]+l*Nbatch
+            j = i + Nbatch - 1
 
-        f.write('echo "$i $j ";'+"\n")
-        if inject:
-            f.write('python '+python_execute+' -i $i -j $j -fig -n 1 -sd "'+str(k)+'";'+"\n")
-        else:
-            f.write('python '+python_execute+' -i $i -j $j -fig -n 1 -q -sd "'+str(k)+'";'+"\n")
+            f.write('i='+str(i)+';'+"\n")
+            f.write('j='+str(j)+';'+"\n")
+            f.write('echo "$i $j ";'+"\n")
+            if l==Nrep-1:
+                ender=""
+            if Nrep > 1:
+                cont=" -cb "+str(l)
+            else:
+                cont=""
+                
+            if inject:
+                f.write('python '+python_execute+' -i $i -j $j -fig -n 1 -sd "'+str(k)+'" '+cont+ender+"\n")
+            else:
+                f.write('python '+python_execute+' -i $i -j $j -fig -n 1 -q -sd "'+str(k)+'" '+cont+ender+"\n")
+            
         f.close()
 
 
@@ -61,11 +71,11 @@ def get_h5amount():
 
 
 if __name__ == "__main__":
-    Nbatch=32 # bacth num for an execute.    
+    Nbatch=32 # bacth num for an execute.
+    Nrep=4 #num of repeat
     igtrap=get_h5amount()
     #Nsh = 207 # num of eachshells
     
     make_backend()
-#    make_mock_each_inject()
-    make_mock_each(Nbatch,igtrap)
+    make_mock_each(Nbatch,igtrap,Nrep=Nrep, inject=True)
     make_mockall_sh(igtrap,seq=True)
