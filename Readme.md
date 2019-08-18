@@ -20,6 +20,7 @@ For the data, see [here](http://secondearths.sakura.ne.jp/gtrap/).
 ## dnn
 
 CNN classifier using Keras. From astronet.
+Set your Keras environment.
 
 
 # gtrap
