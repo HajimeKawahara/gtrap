@@ -16,6 +16,12 @@ pip install mysql-connector-python-rf
 
 For the data, see [here](http://secondearths.sakura.ne.jp/gtrap/).
 
+
+## dnn
+
+CNN classifier using Keras. From astronet.
+
+
 # gtrap
 
 ## gtls
@@ -46,14 +52,4 @@ GBLS also has a gpu-based smoother, which devide a light curve by the median fil
 
 The algorithm for the fast median filter is based on the chapter of "Implementing a fast median filter" by Gilles Perrot from the textbook, "Designing Scientific Applications on GPUs".
 
-## genmonck
-
-Generating LCs with mock transit (for training).
-
-## picktrap
-
-
-## gnet
-
-CNN classifier using Keras.
 
