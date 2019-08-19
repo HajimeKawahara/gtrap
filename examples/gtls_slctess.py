@@ -21,12 +21,8 @@ def injecttransit(lc,tu,nq,mstar,rstar):
     Rs = rstar
 
     a = (((Porb*u.day)**2 * G * (Ms*M_sun + Mp*M_jup) / (4*np.pi**2))**(1./3)).to(R_sun).value/Rs     
-    #b=a*np.cos(ideg/180.0*np.pi)
     b=np.random.random()
     ideg=np.arccos(b/a)/np.pi*180.0
-    #print(ideg,"deg")
-    #ideg=ideg[0]
-
     
     tux=np.copy(tu)
     tux[tu<0.0]=None
@@ -95,6 +91,9 @@ if __name__ == "__main__":
     parser.add_argument('-j', nargs=1, help='mid end (master ID)', type=int)
 
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
+    parser.add_argument('-scc', nargs='+', help='sector_camera_chip, ex) 1_1_1 ', type=str)
+    # ex: python gtls_slctess.py -t 126786393 -scc 1_1_1 -n 2 -fig -q
+
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
     parser.add_argument('-o', nargs=1, default=["output.txt"],help='output', type=str)
     parser.add_argument('-n', nargs=1, default=[1],help='Number of picking peaks', type=int)
@@ -103,71 +102,115 @@ if __name__ == "__main__":
     parser.add_argument('-smt', nargs=1, default=[15],help='smooth', type=int)
     parser.add_argument('-q', help='No injection', action='store_true')
     parser.add_argument('-p', help='picking mode', action='store_true')    
-
+    parser.add_argument('-sd', nargs=1, help='output', type=str)
+    parser.add_argument('-cb', nargs=1, help='counter of multibatch', type=int)
     
     ### SETTING
+    ctldir="/home/kawahara/gtrap/data/ctl.list/"
     mpdin = 48 #1 d for peak search margin
-    np.random.seed(1)
-            
+    np.random.seed(1)            
     args = parser.parse_args()
-    midsx=args.i[0]
-    midex=args.j[0]+1
-#    pickonly = False
+    if args.sd:
+        subd=args.sd[0]
+    else:
+        subd=""
+
     pickonly = args.p
 
-    ###get filename from the list
-    igname="../data/ctl.list/igtrap.list"
-    datc=pd.read_csv(igname,names=("tag","i","j"))
-    
-    taglist=datc["tag"]
-    tagnum=datc["i"].values
+    if args.i and args.j:
+        midsx=args.i[0]
+        midex=args.j[0]+1
+        #    pickonly = False
+        
+        ###get filename from the list
+        igname=os.path.join(ctldir, "igtrap.list")
+        datc=pd.read_csv(igname,names=("tag","i","j"))
+        
+        taglist=datc["tag"]
+        tagnum=datc["i"].values
+        
+        itag=np.searchsorted(tagnum,midsx+1)
+        itage=np.searchsorted(tagnum,midex+1)
+        print(itag,itage)
+        
+        if itag==itage:    
+            tag=taglist[itag-1]
+            print("tag",tag,midsx,midex)
+            listname=os.path.join(ctldir,"ctl.list_"+tag+".npz")
+            dat=np.load(listname)
+            igtrap=dat["arr_0"]
+            mids=np.searchsorted(igtrap,midsx)
+            mide=np.searchsorted(igtrap,midex)
+            filelist=dat["arr_1"][mids:mide]    
+            rstar=dat["arr_2"][mids:mide] #stellar radius
+            mstar=dat["arr_3"][mids:mide] #stellar mass
+            
+        else:
+            tag=taglist[itag-1]        
+            listname=os.path.join(ctldir,"ctl.list_"+tag+".npz")
+            dat=np.load(listname)
+            igtrap=dat["arr_0"]
+            mids=np.searchsorted(igtrap,midsx)
+            filelist=dat["arr_1"][mids:]    
+            
+            rstar=dat["arr_2"][mids:] #stellar radius
+            mstar=dat["arr_3"][mids:] #stellar mass        
+            
+            tag=taglist[itage-1]
+            listname=os.path.join(ctldir,"ctl.list_"+tag+".npz")
+            dat=np.load(listname)
+            igtrap=dat["arr_0"]
+            mide=np.searchsorted(igtrap,midex)
+            filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
+            rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
+            mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
+    elif args.t and args.scc:
+        from urllib.parse import urlparse
+        import mysql.connector
 
-    itag=np.searchsorted(tagnum,midsx)
-    itage=np.searchsorted(tagnum,midex)
+        url = urlparse('mysql://fisher:atlantic@133.11.229.168:3306/TESS')
+        conn = mysql.connector.connect(
+            host = url.hostname or '133.11.229.168',
+            port = url.port or 3306,
+            user = url.username or 'fisher',
+            password = url.password or 'atlantic',
+            database = url.path[1:],
+        )
+        cur = conn.cursor()
 
+        rstar=[]
+        mstar=[]
+        filelist=[]
+        for ii,tic in enumerate(args.t):
+            scc=args.scc[ii]
+            com='SELECT rad,mass FROM CTLchip'+scc+' where ID='+str(tic)
+            print(com)
+            if int(scc[0])<11:
+                filelist.append("/manta/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
+            else:
+                filelist.append("/stingray/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
 
-    if itag==itage:    
-        tag=taglist[itag-1]
-        print("tag",tag,midsx,midex)
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mids=np.searchsorted(igtrap,midsx)
-        mide=np.searchsorted(igtrap,midex)
-        filelist=dat["arr_1"][mids:mide]    
-        rstar=dat["arr_2"][mids:mide] #stellar radius
-        mstar=dat["arr_3"][mids:mide] #stellar mass        
+            cur.execute(com)
+            out=cur.fetchall()[0]
+            out=np.array(out) #rad, mass
+            rstar.append(out[0])
+            mstar.append(out[1])
+        rstar=np.array(rstar)
+        mstar=np.array(mstar)
+
     else:
-        tag=tagnum[itag]        
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mids=np.searchsorted(igtrap,midsx)
-        filelist=dat["arr_1"][mids:]    
-        rstar=dat["arr_2"][mids:] #stellar radius
-        mstar=dat["arr_3"][mids:] #stellar mass        
+        sys.exit("Specify -i&-j or -t&-scc")
 
-        tag=tagnum[itage]        
-        listname="../data/ctl.list/ctl.list_"+tag+".npz"
-        dat=np.load(listname)
-        igtrap=dat["arr_0"]
-        mide=np.searchsorted(igtrap,midex)
-        filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
-        rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
-        mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
-    
-#    elapsed_time = time.time() - start
-#    print (("2 :{0}".format(elapsed_time)) + "[sec]")
-    
     nin=2000
-    lc,tu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
-
+    lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    icnt=0
+    idet=0 #detected number
+    
     if args.q or pickonly:
         print("NO INJECTION")
     else:
         lc,Porb,t0=injecttransit(lc,tu,nq,mstar,rstar)
         
-    
     ## for transit ##
     if args.m[0] == 0:
         lc = 2.0 - lc
@@ -180,6 +223,7 @@ if __name__ == "__main__":
         sys.exit("No mode")
 
     #median filter width
+    #medsmt_width = 50
     medsmt_width = 50
     nby=1000 ## of thread
     dev_imgout=gfilter.get_detrend(lc,nby=nby,nbx=1,r=medsmt_width,isw=0,osw=1) #detrend
@@ -195,17 +239,18 @@ if __name__ == "__main__":
 
     #tbls setting
     #the number of the window width= # of the threads should be 2^n !!!!
-    nw=1024 
+    nw=1024 ### ? 
     
     # Max and Min of Widths
-    wmin = 0.2  #  day
+    wmin = 0.20  #  day
     wmax = 1.0  # day
     dw=(wmax-wmin)/(nw-1)
     t0min=(2*wmin) #test
-
+#    t0min=(0.*wmin) #test
+    
     dt=1.0
     nt=len(tu[:,0])
-    nl=20
+    nl=50
 
     # the number of a scoop
     nsc=int(wmax/deltat+3.0)
@@ -256,37 +301,34 @@ if __name__ == "__main__":
     ########################
     PickPeaks=args.n[0]
     for iq,tic in enumerate(ticarr):
-        detection=0
-        lab=0
-        fac=1.0
-        ffac = 8.0 #region#
-
-        mask = (tlssn[iq::nq]>0.0)        
-        std=np.std(tlssn[iq::nq][mask])
-        median=np.median(tlssn[iq::nq])
-        #### PEAK STATISTICS ####
-        peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
-        peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]                
-        PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
-        maxsn=tlssn[iq::nq][peak][0:PickPeaks]
-        Pinterval=np.abs(tlst0[iq::nq][peak][1]-tlst0[iq::nq][peak][0])
-        far=(maxsn-median)/std
-        minlen =  10000.0 #minimum length for time series
-        lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
-
-
-        for ipick in range(0,PickPeaks):
-            print("##################"+str(ipick)+"##########################")
-
-            if True:
-
+        print(iq,"/",len(ticarr))
+        if True:
+#        try:
+            ticname=str(tic)
+            detection=0
+            lab=0
+            fac=1.0
+            ffac = 8.0 #region#
+            
+            mask = (tlssn[iq::nq]>0.0)        
+            std=np.std(tlssn[iq::nq][mask])
+            median=np.median(tlssn[iq::nq])
+            #### PEAK STATISTICS ####
+            peak = dp.detect_peaks(tlssn[iq::nq],mpd=mpdin)
+            peak = peak[np.argsort(tlssn[iq::nq][peak])[::-1]]                
+            PickPeaks=min(PickPeaks,len(tlssn[iq::nq][peak]))
+            maxsn=tlssn[iq::nq][peak][0:PickPeaks]
+            far=(maxsn-median)/std
+            minlen =  10000.0 #minimum length for time series
+            lent =len(tlssn[iq::nq][tlssn[iq::nq]>0.0])
+            detsw=0
+            for ipick in range(0,PickPeaks):
                 i = peak[ipick]
                 im=np.max([0,int(i-nsc*ffac)])
                 ix=np.min([nt,int(i+nsc*ffac)])
                 imn=np.max([0,int(i-nsc/2)])
                 ixn=np.min([nt,int(i+nsc/2)])
-                
-            
+                            
                 if args.m[0] == 0:    
                     llc=2.0 - lc[im:ix,iq]
                     llcn=2.0 - lc[imn:ixn,iq]
@@ -305,19 +347,18 @@ if __name__ == "__main__":
                 H=tlshmax[iq::nq][peak[ipick]]
                 
                 #################
-                print("GPU ROUGH: T0,W,L,H")
-                print(T0,W,L,H)
+                #print("GPU ROUGH: T0,W,L,H")
+                #print(T0,W,L,H)
                 
                 if args.q or pickonly:
                     dTpre=0.0
                 else:
                     dTpre=np.abs((np.mod(T0,Porb[iq]) - np.mod(t0[iq]+tu0[iq],Porb[iq]))/(W/2))
-                print("DIFF/dur=",dTpre)
+                #print("DIFF/dur=",dTpre)
 
 #                if True:
                 if (dTpre < 0.1 and detection == 0) or args.q or pickonly:
-                    print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
-
+                    #print("(*_*)/ DETECTED at n=",ipick+1," at ",peak[ipick])
                     detection = ipick+1
                     if args.q:
                         lab=0
@@ -325,36 +366,57 @@ if __name__ == "__main__":
                         lab=-1
                     else:
                         lab=1
-                                   
-
+                    
+                    
                     T0tilde=tlst0[iq::nq][peak[ipick]]
                     ## REINVERSE
                     if args.m[0] == 0:
                         lc = 2.0 - lc
 
-                    if True:
-                        sector=sectorarr[iq]
-                        camera=cameraarr[iq]
-                        CCD=CCDarr[iq]
+                    sector=sectorarr[iq]
+                    camera=cameraarr[iq]
+                    CCD=CCDarr[iq]
 
-                        if pickonly:
-                            savpng="png"
-                            tag="TIC"+str(ticname)+"s"+str(lab)
-                        else:
-                            savpng="mocklc_slctess/png"
-                            tag="TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
-                        ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
-                        #                    try:
-                        lcs, tus, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=201,check=args.fig,tag=tag,savedir=savpng)      
-                        lcsw, tusw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=3,nx=2001,check=args.fig,tag=tag,savedir=savpng)
-                        #                print(len(lcs),len(lcsw))
-                        starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
-                        if pickonly:
-                            np.savez("picklc_slctess/pick_slctess"+str(ticname)+"_"+str(ipick),[lab],lcs,lcsw,starinfo)
-                        else:
-                            np.savez("mocklc_slctess/mock_slctess"+str(tic)+"_"+str(ipick)+"TF"+str(lab),[lab],lcs,lcsw,starinfo)
+                    if pickonly:
+                        tag="TIC"+str(ticname)+"s"+str(lab)
+                        savedd="/home/kawahara/gtrap/examples/picklcslc/"+subd
 
+                    else:
+                        if args.cb:
+                            counter=str(args.cb[0])+"_"+str(icnt)
+                        else:
+                            counter=str(icnt)
+                        tag=counter+"_TIC"+str(tic)+"_"+str(ipick)+"TF"+str(lab)
+                        savedd="/home/kawahara/gtrap/examples/mocklcslc/"+subd
+
+                    savpng=os.path.join(savedd,"png")                       
+                    savnpz=os.path.join(savedd,"npz")                       
+
+                    os.makedirs(savnpz, exist_ok=True)
+                    os.makedirs(savpng, exist_ok=True)
+
+                        
+                    ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
+
+                    asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
+                    lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
+                    asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_awide",savedir=savpng,T0lab=T0)
+                    lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
+
+                    starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
+                    if pickonly:
+                        np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                    else:
+                        np.savez(os.path.join(savnpz,counter+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                    icnt=icnt+1
+                    if detsw == 0:
+                        idet=idet+1
+                        detsw=0
+#        except:
+#            print(iq,"/",len(ticarr),"Some Error in cleanning/")
+
+    print("Detected:",idet,"/",len(ticarr))
 
     elapsed_time = time.time() - start
     print (("2 :{0}".format(elapsed_time)) + "[sec]")
-    print (elapsed_time/(mide-mids), "[sec/N]")
+#    print (elapsed_time/(midex-midsx), "[sec/N]")

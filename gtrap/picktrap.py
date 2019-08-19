@@ -24,7 +24,7 @@ def getkicdir(kicnum,ddir="/sharksuck/kic/data/"):
     return ddir+rawdir
 
 
-def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,contcrit=84,check=False,lcout=False,tag="",savedir="./"):
+def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,contcrit=84,check=False,lcout=False,tag="",savedir="./",T0lab=None):
     #nx=64 length of WNC vector
     #lc,tu,n,ntrue,nq,inval,bjdoffset,t0, t,det=kep.load_keplc([kicdir],offt="0")
     mask=(tu>0.0)
@@ -35,8 +35,8 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     ii=numar[tuu[i]==tu][0]
 
     wid=int(alpha*W*daytopix)
-    print("W=",W,"d")
-    print("The range is between -",alpha," W to +",alpha," W." )
+#    print("W=",W,"d")
+#    print("The range is between -",alpha," W to +",alpha," W." )
     iss=ii-int(1.11*alpha*wid)
     iee=ii+int(1.11*alpha*wid)
     nget=iee-iss
@@ -55,12 +55,14 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     iend=min(iend,len(tu))
     tus=np.ones(nget)*1000 #fill positive
     lcs=np.ones(nget)*np.nanmedian(lc[istart:iend])
+    igap=np.zeros(nget,dtype=np.int32)
+    
     try:
         tus[isp:iep]=np.copy(tu[istart:iend])
         lcs[isp:iep]=np.copy(lc[istart:iend])
     except:
-        print("isp,iep,istart,iend,iss,iee,nget,len(tu)")
-        print(isp,iep,istart,iend,iss,iee,nget,len(tu))
+        #        print("isp,iep,istart,iend,iss,iee,nget,len(tu)")
+        #        print(isp,iep,istart,iend,iss,iee,nget,len(tu))
         sys.exit()
     #pre classifier (check continuous null region)
 
@@ -95,20 +97,24 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
 #                    lcs[j] = (lcsminus[j])
                     lcs[j] = (lcsminus[j] + lcsplus[j])/2.0
                     tus[j]=1000.0
-
+                    igap[j]=1
+                    
                 elif tusminus[j] > 0.0:
                     lcs[j] = medv                    
 #                    lcs[j] = lcsminus[j]
                     tus[j]=1000.0
+                    igap[j]=1
+
                 elif tusplus[j] > 0.0:
                     lcs[j] = medv                    
 #                    lcs[j] = lcsplus[j]
                     tus[j]=1000.0
+                    igap[j]=1
 
         if len(tus[tus<0.0])==0:
             sw = 1
     ### median filter
-    lcs=signal.medfilt(lcs,kernel_size=3)
+    #    lcs=signal.medfilt(lcs,kernel_size=3)
 
     ### NORMALIZE
     lcs=(lcs-np.mean(lcs))/np.std(lcs)
@@ -119,55 +125,51 @@ def pick_Wnormalized_cleaned_lc_direct(lc,tu,T0,W,alpha=2,nx=128,daytopix=48,con
     fx = interpolate.interp1d(tt, lcs)
     tx=np.array(range(0,nx))*2.0*alpha/nx - alpha
 
+    fxg = interpolate.interp1d(tt, igap)
     
     try:
         lcsx=fx(tx)
+        igapx=fxg(tx)
     except:
         print("Interpolate Failed")
         print("Consider to increase alphad in picktrap.py")
         lcsx=np.ones(len(tx))
+        igapx=np.ones(len(tx))
         
-    #fig=plt.figure()
-    #ax=fig.add_subplot(211)
-    #ax.plot(tu,lc,".")
-    #ax.plot(tu[istart:iend,0],lc[istart:iend,0],".",color="red")
-    #plt.axvline(T0)
-    #plt.xlim(0,np.max(tu))
-    #ax=fig.add_subplot(212)
-    #ax.plot(tt,lcs,".",color="red")
-    #for i in tx:
-    #    plt.axvline(i,alpha=0.2)
-    #plt.savefig("../examples/test.png")
-    #print(tus)
-    #print(lcs)
-#    sys.exit()
 
         
     if check:
         fig=plt.figure()
-        ax=fig.add_subplot(211)
+        ax=fig.add_subplot(311)
         istartx=np.max([0,istart-wid])
         iendx=np.min([len(lc),iend+wid])
         lctmp=lc[istartx:iendx]
         tutmp=tu[istartx:iendx]
         mask=(tutmp>0.0)
         ax.plot(tutmp[mask],lctmp[mask],".",color="gray",label="before clean")
-
+        plt.title("T0="+str(T0lab))
         plt.legend()
-        ax=fig.add_subplot(212)
+
+
+        ax=fig.add_subplot(312)
+        ax.plot(tt,igap,".",color="orange")
+        ax.plot(tx,igapx,".",color="red")
+        plt.ylabel("iGAP")
+
+        ax=fig.add_subplot(313)
         ax.plot(tt,lcs,".",color="orange")
         ax.plot(tx,lcsx,".",color="red")
-
-        plt.xlabel("time (W)")
         plt.ylabel("WNC vector")
+        plt.xlabel("time (W)")
+
+
         #plt.savefig("../examples/test2.png")
-        plt.savefig(os.path.join(savedir,tag+".png"))
-        #        plt.show()
-        
+        pp=plt.savefig(os.path.join(savedir,tag+".png"))
+        plt.close()
     if lcout:
         return lcs, tus, lc[istart:iend], tu[istart:iend], lc, tu, prec
     else:
-        return lcsx, tx, prec
+        return lcsx, tx, igapx, prec
 
 
 if __name__ == "__main__":

@@ -42,9 +42,9 @@ for sector in p_work["sector"]:
             h5list = vmi.glob_h5(p_work["data_type"], sector, camera, chip, 2)
             j=0
             nlen=len(h5list)
-            tag=str(sector)+"_"+str(camera)+"_"+str(chip)
+            scc=str(sector)+"_"+str(camera)+"_"+str(chip)
             #            print(h5list)
-            f.write(tag+","+str(icnt+1)+",")
+            f.write(scc+","+str(icnt+1)+",")
             for fn in h5list:
                 files.append(fn)
                 igtrap.append(icnt)
@@ -54,7 +54,7 @@ for sector in p_work["sector"]:
                 tic=fn.split("_")[1]
                 try:
             #        cur.execute('SELECT rad,mass FROM CTLv7 where ID='+str(tic))
-                    cur.execute('SELECT rad,mass FROM CTLchip'+tag+' where ID='+str(tic))
+                    cur.execute('SELECT rad,mass FROM CTLchip'+scc+' where ID='+str(tic))
                     out=cur.fetchall()[0]
                     out=np.array(out) #rad, mass
                     rad.append(out[0])
@@ -68,6 +68,6 @@ for sector in p_work["sector"]:
 
             rad=np.array(rad)
             mass=np.array(mass)    
-            np.savez("../ctl.list/ctl.list_"+str(tag)+".npz",igtrap,files,rad,mass)
+            np.savez("../ctl.list/ctl.list_"+str(scc)+".npz",igtrap,files,rad,mass)
             f.write(str(icnt)+"\n")
 f.close()
