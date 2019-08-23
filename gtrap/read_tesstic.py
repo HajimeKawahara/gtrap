@@ -6,6 +6,7 @@ import h5py
 import sys
 import pandas as pd
 from gtrap import asteroid_indicator as ai
+from gtrap import inverse_cross_bkgd as icb
 
 def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
     
@@ -14,6 +15,9 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
     lc=[]
     tu=[]
     asind=[]
+    lcicb1=[]
+    lcicb2=[]
+
     infogap=[]
     ntrue=[]
     tu0=[]
@@ -25,10 +29,10 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
         n=n+1
 
     for k in range(0,nq):
-        t, det, q, cno, ra, dec, tic, sector, camera, CCD, cnts =read_tesstic(filelist[k])
+        t, det, q, cno, ra, dec, tic, sector, camera, CCD, cnts, apbkg =read_tesstic(filelist[k])
 
-        ndmax = ai.comp_ndmax(cnts)
-        
+        ndmax = ai.compute_ndmax(cnts)
+        icb1,icb2  = icb.compute_icb(cnts,apbkg)
         if good_quality:
             #masking quality flaged bins
             mask=(q==0) + (q==2)
@@ -37,8 +41,10 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
             det=det[mask]
             cno=cno[mask]
             ndmax=ndmax[mask]
-            
-        lcn, tun, ndmaxn, t0=throw_tessintarray(n,cno,ndmax,t,det,fillvalv=1.002,fillvalt=inval,offt=offt)        
+            icb1=icb1[mask]
+            icb2=icb2[mask]
+
+        lcn, tun, ndmaxn,icb1n,icb2n, t0=throw_tessintarray(n,cno,ndmax,icb1,icb2,t,det,fillvalv=1.002,fillvalt=inval,offt=offt)        
 
         gapmask=(tun<0)
         ntrue.append(len(tun[~gapmask]))
@@ -51,7 +57,10 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
         tu.append(tun)        
         lc.append(lcn)
         asind.append(ndmaxn)
-#        infogap.append(igap)
+        lcicb1.append(icb1n)
+        lcicb2.append(icb2n)
+
+        #        infogap.append(igap)
         
         tu0.append(t0)
         ticarr.append(tic)
@@ -62,7 +71,10 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
     lc=np.array(lc).transpose().astype(np.float32)
     tu=np.array(tu).transpose().astype(np.float32)
     asind=np.array(asind).transpose().astype(np.float32)
-#    infogap=np.array(infogap).transpose().astype(np.int32)
+    lcicb1=np.array(lcicb1).transpose().astype(np.float32)
+    lcicb2=np.array(lcicb2).transpose().astype(np.float32)
+
+    #    infogap=np.array(infogap).transpose().astype(np.int32)
 
     ntrue=np.array(ntrue).astype(np.uint32)
     tu0=np.array(tu0)
@@ -70,7 +82,7 @@ def load_tesstic(filelist,n,offt="t[0]",nby=1000,good_quality=True):
 #    mask=(t==t)
 #    t=t[mask]
 #    det=det[mask]
-    return lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr
+    return lc,tu,asind,lcicb1,lcicb2,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr
 
 
 def read_tesstic(hdf):
@@ -94,11 +106,12 @@ def read_tesstic(hdf):
         sector=f["header"]["sector"].value
         camera=f["header"]["camera"].value
         CCD=f["header"]["chip"].value
+        apbkg=f["APERTURE_MASK"]["FLUX_BKG"].value
 
-        return time, flux, q, cno, ra, dec, tic, sector, camera, CCD, cnts
+        return time, flux, q, cno, ra, dec, tic, sector, camera, CCD, cnts, apbkg
 
 
-def throw_tessintarray(n,cno,ndmax,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
+def throw_tessintarray(n,cno,ndmax,icb1,icb2,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]"):
     #dt=t[2]-t[1]
     #offt=t[1]    
     offset=np.array(cno[0])
@@ -112,6 +125,9 @@ def throw_tessintarray(n,cno,ndmax,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
 #        print("Filling ",jend,"-values in ",n," elements in lcn.")
     tun=np.ones(n)*fillvalt
     ndmaxn=np.zeros(n)
+    icb1n=np.zeros(n)
+    icb2n=np.zeros(n)
+    
     if offt=="t[0]":
         t0=t[0]
     else:
@@ -122,10 +138,12 @@ def throw_tessintarray(n,cno,ndmax,t,lc,fillvalv=-1.0,fillvalt=-5.0,offt="t[0]")
         if lc[i]==lc[i] and ndmax[i]==ndmax[i]:    
             lcn[j]=lc[i]
             ndmaxn[j]=ndmax[i]
+            icb1n[j]=icb1[i]
+            icb2n[j]=icb2[i]
             tun[j]=t[i]-t0
 #            igap[j]=0
             
-    return lcn,tun,ndmaxn,t0
+    return lcn,tun,ndmaxn,icb1n,icb2n,t0
 
     
 if __name__ == "__main__":
