@@ -184,8 +184,9 @@ if __name__ == "__main__":
         for ii,tic in enumerate(args.t):
             scc=args.scc[ii]
             com='SELECT rad,mass FROM CTLchip'+scc+' where ID='+str(tic)
-            print(com)
-            if int(scc[0])<11:
+            sector=scc.split("_")[0]
+            print("Sector=",sector)
+            if int(sector)<11:
                 filelist.append("/manta/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
             else:
                 filelist.append("/stingray/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
@@ -202,7 +203,8 @@ if __name__ == "__main__":
         sys.exit("Specify -i&-j or -t&-scc")
 
     nin=2000
-    lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    lc,tu,asind,bkgu,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    
     icnt=0
     idet=0 #detected number
     
@@ -398,16 +400,21 @@ if __name__ == "__main__":
                         
                     ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
 
+                    bkgs, btus, binfogap, bprec=pt.pick_Wnormalized_cleaned_lc_direct(bkgu[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_blocal",savedir=savpng,T0lab=T0)                        
+
                     asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
                     lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
+
+                    bkgsw, btusw, binfogapw, bprecw=pt.pick_Wnormalized_cleaned_lc_direct(bkgu[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_bwide",savedir=savpng,T0lab=T0)
+
                     asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_awide",savedir=savpng,T0lab=T0)
                     lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
 
                     starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                     if pickonly:
-                        np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,bkgs,bkgsw,starinfo)
                     else:
-                        np.savez(os.path.join(savnpz,counter+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,counter+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,bkgs,bkgsw,starinfo)
                     icnt=icnt+1
                     if detsw == 0:
                         idet=idet+1
