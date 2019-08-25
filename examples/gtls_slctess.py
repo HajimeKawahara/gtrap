@@ -92,6 +92,8 @@ if __name__ == "__main__":
 
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
     parser.add_argument('-scc', nargs='+', help='sector_camera_chip, ex) 1_1_1 ', type=str)
+    parser.add_argument('-l', nargs=1, help='tic,scc list', type=str)
+
     # ex: python gtls_slctess.py -t 126786393 -scc 1_1_1 -n 2 -fig -q
 
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
@@ -164,10 +166,18 @@ if __name__ == "__main__":
             filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
             rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
             mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
-    elif args.t and args.scc:
+    elif (args.t and args.scc) or args.l:
         from urllib.parse import urlparse
         import mysql.connector
 
+        if args.l:
+            tslist=pd.read_csv(args.l[0],delimiter=",")
+            ticlist=tslist["TIC"]
+            scclist=tslist["SCC"]
+        else:
+            ticlist=args.t
+            scclist=args.scc
+            
         url = urlparse('mysql://fisher:atlantic@133.11.229.168:3306/TESS')
         conn = mysql.connector.connect(
             host = url.hostname or '133.11.229.168',
@@ -181,8 +191,8 @@ if __name__ == "__main__":
         rstar=[]
         mstar=[]
         filelist=[]
-        for ii,tic in enumerate(args.t):
-            scc=args.scc[ii]
+        for ii,tic in enumerate(ticlist):
+            scc=scclist[ii]
             com='SELECT rad,mass FROM CTLchip'+scc+' where ID='+str(tic)
             sector = int(scc.split("_")[0])
             print(com,sector)
@@ -377,6 +387,7 @@ if __name__ == "__main__":
                     sector=sectorarr[iq]
                     camera=cameraarr[iq]
                     CCD=CCDarr[iq]
+                    #scctag=str(sector)+"_"+str(camera)+"_"+str(CCD)
 
                     if pickonly:
                         tag="TIC"+str(ticname)+"s"+str(lab)
@@ -415,7 +426,7 @@ if __name__ == "__main__":
                     if pickonly:
                         np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,lcicb1s,lcicb1sw,lcicb2s,lcicb2sw,starinfo)
                     else:
-                        np.savez(os.path.join(savnpz,counter+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,lcicb1s,lcicb1sw,lcicb2s,lcicb2sw,starinfo)
+                        np.savez(os.path.join(savnpz,counter+"_mock"+str(ticname)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,lcicb1s,lcicb1sw,lcicb2s,lcicb2sw,starinfo)
                     icnt=icnt+1
                     if detsw == 0:
                         idet=idet+1

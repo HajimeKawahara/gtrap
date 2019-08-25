@@ -35,6 +35,15 @@ Use batch/makepicksh.py.
 
 - 4. Do DNN!
 
+
+## Updating training sets
+
+train/train? is trained data sets/
+
+
+-tips
+use cph5fromlist.py and .list to collect h5 for transfer. 
+
 # Kepler STE
 
 - gtls_mockkepler.py -- generate mock template after the TLS identifier
