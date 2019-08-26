@@ -18,9 +18,9 @@ def make_mockall_sh(igtrap,seq=True):
     f.write('echo "--------------------------";'+"\n")
     f.write('echo "$i";'+"\n")
     if seq==True:
-        f.write(os.path.join(dirname,eachname)+'"$i".sh '+"\n")
+        f.write(""+os.path.join(dirname,eachname)+'"$i".sh '+"\n")
     else:
-        f.write(os.path.join(dirname,eachname)+'"$i".sh &> log"$i" &'+"\n")
+        f.write(""+os.path.join(dirname,eachname)+'"$i".sh &> log"$i" &'+"\n")
     f.write('echo "==========================";'+"\n")
 
     f.write("done"+"\n")
@@ -77,5 +77,6 @@ if __name__ == "__main__":
     #Nsh = 207 # num of eachshells
     
     make_backend()
+#    make_mock_each(Nbatch,igtrap,Nrep=Nrep, inject=False)
     make_mock_each(Nbatch,igtrap,Nrep=Nrep, inject=True)
     make_mockall_sh(igtrap,seq=True)
