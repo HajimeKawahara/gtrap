@@ -33,7 +33,6 @@ if __name__ == "__main__":
     flist=sorted(glob.glob(os.path.join(traindir,'*.npz')))
     print(len(flist))
     lab,X,Xw,info=io.makearr(flist)
-    sys.exit()
     inlocal = Input(shape=(np.shape(X)[1],np.shape(X)[2]))
     inwide = Input(shape=(np.shape(Xw)[1],np.shape(Xw)[2]))
 
