@@ -32,7 +32,7 @@ if __name__ == "__main__":
     traindir=args.d[0]
     flist=sorted(glob.glob(os.path.join(traindir,'*.npz')))
     print(len(flist))
-    lab,X,Xw,info=io.makearrB(flist)
+    lab,X,Xw,info=io.makearrBL2(flist)
     inlocal = Input(shape=(np.shape(X)[1],np.shape(X)[2]))
     inwide = Input(shape=(np.shape(Xw)[1],np.shape(Xw)[2]))
 
@@ -44,11 +44,13 @@ if __name__ == "__main__":
     act="relu"
     strmp=2
 
- 
-#    wide = Conv1D(16,5,activation=act,padding=pad)(inwide)
-#    wide = Conv1D(16,5,activation=act,padding=pad)(wide)
-#    wide = MaxPooling1D(5,strides=strmp)(wide)
-    wide = Conv1D(32,5,activation=act,padding=pad)(inwide)
+    wide = Conv1D(8,5,activation=act,padding=pad)(inwide)
+    wide = Conv1D(8,5,activation=act,padding=pad)(wide)
+    wide = MaxPooling1D(5,strides=strmp)(wide) 
+    wide = Conv1D(16,5,activation=act,padding=pad)(wide)
+    wide = Conv1D(16,5,activation=act,padding=pad)(wide)
+    wide = MaxPooling1D(5,strides=strmp)(wide)
+    wide = Conv1D(32,5,activation=act,padding=pad)(wide)
     wide = Conv1D(32,5,activation=act,padding=pad)(wide)
     wide = MaxPooling1D(5,strides=strmp)(wide)
     wide = Conv1D(64,5,activation=act,padding=pad)(wide)
@@ -56,12 +58,6 @@ if __name__ == "__main__":
     wide = MaxPooling1D(5,strides=strmp)(wide)
     wide = Conv1D(128,5,activation=act,padding=pad)(wide)
     wide = Conv1D(128,5,activation=act,padding=pad)(wide)
-    wide = MaxPooling1D(5,strides=strmp)(wide)
-    wide = Conv1D(256,5,activation=act,padding=pad)(wide)
-    wide = Conv1D(256,5,activation=act,padding=pad)(wide)
-    wide = MaxPooling1D(5,strides=strmp)(wide)
-    wide = Conv1D(512,5,activation=act,padding=pad)(wide)
-    wide = Conv1D(512,5,activation=act,padding=pad)(wide)
     wide = MaxPooling1D(5,strides=strmp)(wide)
 
     wide = Flatten()(wide)
@@ -88,9 +84,27 @@ if __name__ == "__main__":
     model = Model(inputs=[inwide,inlocal],outputs=concat)    
     model.compile(optimizer="adam",loss="binary_crossentropy",metrics=["acc"])
     print(model.summary())
-    history=model.fit([Xw,X],lab,epochs=args.e[0],validation_split=0.05)
+    history=model.fit([Xw,X],lab,epochs=args.e[0],validation_split=0.5)
     model.save(output)
     print("***********acc************")
     print(history.history["acc"])
     print("***********val acc************")
     print(history.history["val_acc"])
+
+    print("***********loss************")
+    print(history.history["loss"])
+    print("***********val loss************")
+    print(history.history["val_loss"])
+
+    fig=plt.figure()
+    ax=fig.add_subplot(211)
+    ax.plot(history.history["acc"],label="acc")
+    ax.plot(history.history["val_acc"],label="val_acc")
+    plt.legend()
+
+    ax=fig.add_subplot(212)
+    ax.plot(history.history["loss"],label="loss")
+    ax.plot(history.history["val_loss"],label="val_loss")
+    plt.legend()
+    plt.savefig("res.png")
+    
