@@ -92,6 +92,8 @@ if __name__ == "__main__":
 
     parser.add_argument('-t', nargs='+', help='tic id', type=int)
     parser.add_argument('-scc', nargs='+', help='sector_camera_chip, ex) 1_1_1 ', type=str)
+    parser.add_argument('-l', nargs=1, help='tic,scc list', type=str)
+
     # ex: python gtls_slctess.py -t 126786393 -scc 1_1_1 -n 2 -fig -q
 
     parser.add_argument('-m', nargs=1, default=[1],help='Mode: transit=0,lensing=1,absolute=2', type=int)
@@ -164,10 +166,18 @@ if __name__ == "__main__":
             filelist=np.concatenate([filelist,dat["arr_1"][:mide]])
             rstar=np.concatenate([rstar,dat["arr_2"][:mide]]) #stellar radius
             mstar=np.concatenate([mstar,dat["arr_3"][:mide]]) #stellar mass        
-    elif args.t and args.scc:
+    elif (args.t and args.scc) or args.l:
         from urllib.parse import urlparse
         import mysql.connector
 
+        if args.l:
+            tslist=pd.read_csv(args.l[0],delimiter=",")
+            ticlist=tslist["TIC"]
+            scclist=tslist["SCC"]
+        else:
+            ticlist=args.t
+            scclist=args.scc
+            
         url = urlparse('mysql://fisher:atlantic@133.11.229.168:3306/TESS')
         conn = mysql.connector.connect(
             host = url.hostname or '133.11.229.168',
@@ -181,11 +191,12 @@ if __name__ == "__main__":
         rstar=[]
         mstar=[]
         filelist=[]
-        for ii,tic in enumerate(args.t):
-            scc=args.scc[ii]
+        for ii,tic in enumerate(ticlist):
+            scc=scclist[ii]
             com='SELECT rad,mass FROM CTLchip'+scc+' where ID='+str(tic)
-            print(com)
-            if int(scc[0])<11:
+            sector = int(scc.split("_")[0])
+            print(com,sector)
+            if sector<11:
                 filelist.append("/manta/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
             else:
                 filelist.append("/stingray/pipeline/CTL2/tess_"+str(tic)+"_"+str(scc)+".h5")
@@ -202,7 +213,7 @@ if __name__ == "__main__":
         sys.exit("Specify -i&-j or -t&-scc")
 
     nin=2000
-    lc,tu,asind,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
+    lc,tu,asind,lcicb1,lcicb2,n,ntrue,nq,inval,tu0,ticarr,sectorarr, cameraarr, CCDarr=tesstic.load_tesstic(filelist,nin,offt="t[0]",nby=1000)
     icnt=0
     idet=0 #detected number
     
@@ -376,6 +387,7 @@ if __name__ == "__main__":
                     sector=sectorarr[iq]
                     camera=cameraarr[iq]
                     CCD=CCDarr[iq]
+                    #scctag=str(sector)+"_"+str(camera)+"_"+str(CCD)
 
                     if pickonly:
                         tag="TIC"+str(ticname)+"s"+str(lab)
@@ -398,16 +410,23 @@ if __name__ == "__main__":
                         
                     ticname=str(tic)+"_"+str(sector)+"_"+str(camera)+"_"+str(CCD)
 
+                    lcicb1s, c1tus, c1infogap, c1prec=pt.pick_Wnormalized_cleaned_lc_direct(lcicb1[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_c1local",savedir=savpng,T0lab=T0)                        
+                    lcicb2s, c2tus, c2infogap, c2prec=pt.pick_Wnormalized_cleaned_lc_direct(lcicb2[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_c2local",savedir=savpng,T0lab=T0)                        
+
                     asinds, atus, ainfogap, aprec=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_alocal",savedir=savpng,T0lab=T0)                        
-                    lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)      
+                    lcs, tus, infogap, prec=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=1,nx=51,check=args.fig,tag=tag+"_local",savedir=savpng,T0lab=T0)
+
+                    lcicb1sw, c1tusw, c1infogapw, c1precw=pt.pick_Wnormalized_cleaned_lc_direct(lcicb1[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_c1wide",savedir=savpng,T0lab=T0)                        
+                    lcicb2sw, c2tusw, c2infogapw, c2precw=pt.pick_Wnormalized_cleaned_lc_direct(lcicb2[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_c2wide",savedir=savpng,T0lab=T0)                        
+                    
                     asindsw, atusw, ainfogapw, aprecw=pt.pick_Wnormalized_cleaned_lc_direct(asind[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_awide",savedir=savpng,T0lab=T0)
                     lcsw, tusw, infogapw, precw=pt.pick_Wnormalized_cleaned_lc_direct(lc[:,iq],tu[:,iq],T0tilde,W,alpha=5,nx=251,check=args.fig,tag=tag+"_wide",savedir=savpng,T0lab=T0)
-
+                    
                     starinfo=[mstar,rstar,tic,sector,camera,CCD,T0,W,L,H]
                     if pickonly:
-                        np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,"pick"+str(ticname)+"_"+str(ipick)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,lcicb1s,lcicb1sw,lcicb2s,lcicb2sw,starinfo)
                     else:
-                        np.savez(os.path.join(savnpz,counter+"_mock"+str(tic)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,starinfo)
+                        np.savez(os.path.join(savnpz,counter+"_mock"+str(ticname)+"_"+str(ipick)+"TF"+str(lab)),[lab],lcs,lcsw,asinds,asindsw,infogap,infogapw,lcicb1s,lcicb1sw,lcicb2s,lcicb2sw,starinfo)
                     icnt=icnt+1
                     if detsw == 0:
                         idet=idet+1

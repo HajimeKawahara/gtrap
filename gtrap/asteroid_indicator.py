@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import medfilt 
 
-def comp_ndmax(cnts):
+def compute_ndmax(cnts):
     nt=cnts.shape[0]
     nx=cnts.shape[1]
     ny=cnts.shape[2]
