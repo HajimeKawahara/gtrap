@@ -10,7 +10,9 @@ import os
 import sys
 from urllib.parse import urlparse
 import mysql.connector
-
+from gtrap import asteroid_indicator as ai
+from gtrap import inverse_cross_bkgd as icb
+import plotpulsenet as ppn
 
 #precision
 def Precision(y_true, y_pred):
@@ -109,17 +111,9 @@ if __name__ == "__main__":
         out=np.array(out) #rad, mass
         rstar=out[0]
         mstar=out[1]
-        
-        #print(ticn)
-        fig = plt.figure()
-        ax = fig.add_subplot(311)
-        ax.plot(Xm[j,:],".")
-        plt.title(ticn+" R="+str(rstar)+" M="+str(mstar))
-        ax = fig.add_subplot(312)
-        ax.plot(Xwm[j,:],".")
-        ax = fig.add_subplot(313)
-        mask=(q==0)
-        plt.axvline(T0[j],color="red",ls="dashed",alpha=0.5)
-        ax.plot(time[mask],flux[mask],".")
-        plt.savefig("predCS/predCS"+ticn+".png")
-        plt.close()
+
+        ndmax = ai.compute_ndmax(cnts)
+        icb1,icb2  = icb.compute_icb(cnts,apbkg)
+        T0j=T0[j]
+        ppn.plotBC(time,flux,q,icb1,icb2, ndmax,T0j, "predCS/predCS"+ticn+".png"):
+
